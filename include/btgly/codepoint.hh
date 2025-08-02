@@ -1,12 +1,19 @@
+//===- codepoint.hh - ASCII Code Point Utilities ----------------*- C++ -*-===//
 //
-// Created by Wael-Amine Boutglay on 05/06/2025.
+// Created by Wael-Amine Boutglay
 //
+// This file defines the CodePoint class which provides numeric constants for
+// ASCII characters and helper predicates for classifying individual code
+// points.
+//
+//===----------------------------------------------------------------------===//
 
 #pragma once
 
 namespace btgly {
 
-  //*-- CodePoint
+  /// CodePoint provides constants for ASCII characters and helper predicates
+  /// for classifying code points.
   class CodePoint {
   public:
     static const int NUL = 0x0000;
@@ -137,19 +144,34 @@ namespace btgly {
     static const int RBRACE = 0x007d;       // right brace ('}')
     static const int TILDE = 0x007e;        // tilde ('~')
 
+    /// Return true if `c` is either `0` or `1`.
     static bool isBinary(int c) { return $0 <= c && c <= $1; }
 
+    /// Return true if `c` is an octal digit.
     static bool isOctal(int c) { return $0 <= c && c <= $7; }
 
+    /// Return true if `c` is a decimal digit.
     static bool isDigit(int c) { return $0 <= c && c <= $9; }
 
-    static bool isHexadecimal(int c) { return ($0 <= c && c <= $9) || ($A <= c && c <= $F) || ($a <= c && c <= $f); }
+    /// Return true if `c` is a hexadecimal digit.
+    static bool isHexadecimal(int c) {
+      return ($0 <= c && c <= $9) || ($A <= c && c <= $F) ||
+             ($a <= c && c <= $f);
+    }
 
-    static bool isLetter(int c) { return ($A <= c && c <= $Z) || ($a <= c && c <= $z); }
+    /// Return true if `c` is an ASCII letter.
+    static bool isLetter(int c) {
+      return ($A <= c && c <= $Z) || ($a <= c && c <= $z);
+    }
 
+    /// Return true if `c` can start an identifier.
     static bool isNameStart(int c) { return isLetter(c); }
 
-    static bool isNamePart(int c) { return isLetter(c) || isDigit(c) || c == UNDERSCORE; }
+    /// Return true if `c` can appear after the first character of an
+    /// identifier.
+    static bool isNamePart(int c) {
+      return isLetter(c) || isDigit(c) || c == UNDERSCORE;
+    }
   };
 
 } // namespace btgly
