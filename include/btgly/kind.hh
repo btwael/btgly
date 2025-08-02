@@ -15,11 +15,11 @@ namespace btgly {
 
   /// Kind implements a simple hierarchical classification that can be used to
   /// describe relationships between runtime entities.
-  template <class T> class Kind {
+  template<class T>
+  class Kind {
   public:
     /// Construct a new `Kind` with the given name and optional parent kind.
-    explicit Kind(const char *name, const Kind<T> *parent_kind = nullptr)
-        : _name(name), _parent_kind(parent_kind) {}
+    explicit Kind(const char *name, const Kind<T> *parent_kind = nullptr) : _name(name), _parent_kind(parent_kind) {}
 
     /// Return the name of this kind.
     const std::string &name() const { return _name; }
@@ -33,18 +33,16 @@ namespace btgly {
     /// Return true if this kind is a subkind of `other`.
     bool is_subkind_of(const Kind<T> &other) const {
       const Kind<T> *kind = this;
-      while (kind != nullptr) {
-        if (kind == &other) {
-          return true;
-        }
+      while(kind != nullptr) {
+        if(kind == &other) { return true; }
         kind = kind->_parent_kind;
       }
       return false;
     }
 
   private:
-    std::string _name;              /// Name associated with this kind.
-    const Kind<T> *_parent_kind;    /// Parent kind or nullptr.
+    std::string _name;           /// Name associated with this kind.
+    const Kind<T> *_parent_kind; /// Parent kind or nullptr.
   };
 
 } // namespace btgly
