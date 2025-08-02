@@ -154,24 +154,17 @@ namespace btgly {
     static bool isDigit(int c) { return $0 <= c && c <= $9; }
 
     /// Return true if `c` is a hexadecimal digit.
-    static bool isHexadecimal(int c) {
-      return ($0 <= c && c <= $9) || ($A <= c && c <= $F) ||
-             ($a <= c && c <= $f);
-    }
+    static bool isHexadecimal(int c) { return ($0 <= c && c <= $9) || ($A <= c && c <= $F) || ($a <= c && c <= $f); }
 
     /// Return true if `c` is an ASCII letter.
-    static bool isLetter(int c) {
-      return ($A <= c && c <= $Z) || ($a <= c && c <= $z);
-    }
+    static bool isLetter(int c) { return ($A <= c && c <= $Z) || ($a <= c && c <= $z); }
 
     /// Return true if `c` can start an identifier.
     static bool isNameStart(int c) { return isLetter(c); }
 
     /// Return true if `c` can appear after the first character of an
     /// identifier.
-    static bool isNamePart(int c) {
-      return isLetter(c) || isDigit(c) || c == UNDERSCORE;
-    }
+    static bool isNamePart(int c) { return isLetter(c) || isDigit(c) || c == UNDERSCORE; }
   };
 
 } // namespace btgly
