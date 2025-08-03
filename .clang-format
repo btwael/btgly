@@ -51,7 +51,7 @@ SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: true
-SpaceBeforeInheritanceColon: true
+SpaceBeforeInheritanceColon: false
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
   AfterControlStatements: false
