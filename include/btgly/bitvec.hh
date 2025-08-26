@@ -24,6 +24,14 @@ namespace btgly {
 
     static BitVec ones(std::size_t width) { return BitVec(1, width); }
 
+    /// \brief Construct a bit-vector of \p width from an integer string.
+    ///
+    /// Parses \p integer as an unsigned integer in base 10 by default, or in
+    /// base 2/8/16 when prefixed with \c 0b / \c 0o / \c 0x respectively.
+    /// The value is reduced modulo 2^width (i.e., truncated to \p width bits).
+    ///
+    /// \param integer The textual integer value (e.g., "42", "0xff", "0b1010").
+    /// \param width   Number of bits. Must be > 0.
     static BitVec from_int(std::string s, std::size_t width) {
       // TODO: specify
       // TODO: deal with empty or illegal string
@@ -96,16 +104,6 @@ namespace btgly {
       return result;
     }
 
-    /// \brief Construct a bit-vector of \p width from an integer string.
-    ///
-    /// Parses \p integer as an unsigned integer in base 10 by default, or in
-    /// base 2/8/16 when prefixed with \c 0b / \c 0o / \c 0x respectively.
-    /// The value is reduced modulo 2^width (i.e., truncated to \p width bits).
-    ///
-    /// \param integer The textual integer value (e.g., "42", "0xff", "0b1010").
-    /// \param width   Number of bits. Must be > 0.
-    BitVec(std::string integer, std::size_t width);
-
     //*- properties
 
     /// \brief Return the number of bits in this bit-vector.
@@ -114,6 +112,19 @@ namespace btgly {
     bool is_all_ones() const { return redand(); }
 
     bool is_zero() const { return !redor(); }
+
+    bool is_negative() const { return _bits[this->width() - 1]; }
+
+    bool is_most_negative() const {
+      const std::size_t w = width();
+      if(!_bits[w - 1]) {
+        return false; // sign bit must be 1
+      }
+      for(std::size_t i = 0; i + 1 < w; ++i) {
+        if(_bits[i]) return false; // all others must be 0
+      }
+      return true;
+    }
 
     //*- methods
 
@@ -201,13 +212,35 @@ namespace btgly {
     ///
     /// \param k Rotation amount (any size; taken modulo \c width()).
     /// \returns A bitwise rotation; width unchanged.
-    BitVec rotate_left(std::size_t k) const; // TODO: implement
+    BitVec rotate_left(std::size_t k) const {
+      // TODO: specify
+      const std::size_t w = width();
+      k %= w;
+      BitVec out(w);
+      for(std::size_t i = 0; i < w; ++i) {
+        // new[i] = old[(i - k) mod w]
+        const std::size_t src = (i + w - (k % w)) % w;
+        out._bits[i] = _bits[src];
+      }
+      return out;
+    }
 
     /// \brief Rotate right by \p k (mod \c width()).
     ///
     /// \param k Rotation amount (any size; taken modulo \c width()).
     /// \returns A bitwise rotation; width unchanged.
-    BitVec rotate_right(std::size_t k) const; // TODO: implement
+    BitVec rotate_right(std::size_t k) const {
+      // TODO: specify
+      const std::size_t w = width();
+      k %= w;
+      BitVec out(w);
+      for(std::size_t i = 0; i < w; ++i) {
+        // new[i] = old[(i + k) mod w]
+        const std::size_t src = (i + (k % w)) % w;
+        out._bits[i] = _bits[src];
+      }
+      return out;
+    }
 
     /// \brief Bitwise NOT (~).
     ///
@@ -373,57 +406,181 @@ namespace btgly {
       return out;
     }
 
-    /// \brief Unsigned division (SMT-LIB \c bvudiv semantics).
+    /// \brief Unsigned division (SMT-LIB \c bvudiv semantics), Div/0 -> all ones.
     ///
     /// \param rhs Divisor.
     /// \returns \c floor(u(*this) / u(rhs)), where \c u is the unsigned value.
     /// Division by zero yields a vector of all 1s.
-    BitVec udiv(const BitVec &rhs) const; // TODO: implement
+    BitVec udiv(const BitVec &rhs) const {
+      // TODO:specify
+      // TODO: ensureSameWidth(rhs, "udiv");
+      const std::size_t w = width();
+      if(rhs.is_zero()) { return BitVec::ones(w); }
+      std::vector<bool> q(w, false), r; // remainder dynamic
+      _udivrem_bits(_bits, rhs._bits, q, r);
+      BitVec out(w);
+      out._bits = std::move(q);
+      return out;
+    }
 
-    /// \brief Unsigned remainder (SMT-LIB \c bvurem semantics).
+    /// \brief Unsigned remainder (SMT-LIB \c bvurem semantics), Div/0 -> lhs.
     ///
     /// \param rhs Divisor.
     /// \returns \c u(*this) mod u(rhs). If \p rhs is zero, returns \c *this.
-    BitVec urem(const BitVec &rhs) const; // TODO: implement
+    BitVec urem(const BitVec &rhs) const {
+      // TODO:specify
+      // TODO: ensureSameWidth(rhs, "urem");
+      const std::size_t w = width();
+      if(rhs.is_zero()) return *this;
+      std::vector<bool> q(w, false), r;
+      _udivrem_bits(_bits, rhs._bits, q, r);
+      BitVec out(w);
+      // copy low w bits of r
+      for(std::size_t i = 0; i < w && i < r.size(); ++i) { out._bits[i] = r[i]; }
+      return out;
+    }
 
     /// \brief Signed division (two's-complement; SMT-LIB \c bvsdiv semantics).
+    /// Div/0 -> -1. Overflow (min / -1) -> min.
     ///
     /// \returns Truncating division toward zero on signed values. Division by
     /// zero yields all 1s (i.e., -1). The overflow case (most-negative / -1)
     /// returns most-negative.
-    BitVec sdiv(const BitVec &rhs) const; // TODO: implement
+    BitVec sdiv(const BitVec &rhs) const {
+      // TODO: specify
+      //TODO: ensureSameWidth(rhs, "sdiv");
+      const std::size_t w = width();
+      if(rhs.is_zero()) {
+        return BitVec::ones(w); // -1
+      }
+      if(is_most_negative() && rhs.is_all_ones()) {
+        return *this; // overflow case
+      }
+
+      const bool negA = is_negative();
+      const bool negB = rhs.is_negative();
+
+      BitVec aMag = negA ? this->neg() : *this;
+      BitVec bMag = negB ? rhs.neg() : rhs;
+
+      BitVec q = aMag.udiv(bMag);
+      if(negA ^ negB) { q = q.neg(); }
+      return q;
+    }
 
     /// \brief Signed remainder (SMT-LIB \c bvsrem semantics).
+    /// Div/0 -> lhs. Overflow (min / -1) -> 0.
     ///
     /// \returns \c s(*this) - trunc(s(*this)/s(rhs)) * s(rhs), where \c s is the
     /// signed value. If \p rhs is zero, returns \c *this. In the overflow case
     /// (most-negative / -1), returns 0.
-    BitVec srem(const BitVec &rhs) const; // TODO: implement
+    BitVec srem(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "srem");
+      const std::size_t w = width();
+      if(rhs.is_zero()) { return *this; }
+      if(is_most_negative() && rhs.is_all_ones()) {
+        return BitVec::zeros(w); // 0
+      }
+
+      const bool negA = is_negative();
+      const bool negB = rhs.is_negative();
+
+      BitVec aMag = negA ? this->neg() : *this;
+      BitVec bMag = negB ? rhs.neg() : rhs;
+
+      BitVec r = aMag.urem(bMag);
+      if(negA) { r = r.neg(); }
+      return r;
+    }
 
     /// \brief Signed modulo (SMT-LIB \c bvsmod semantics).
+    /// Div/0 -> lhs. Overflow (min / -1) -> 0.
     ///
     /// \returns A value with the sign of \p rhs and magnitude < |rhs|. If
     /// \p rhs is zero, returns \c *this. In the overflow case
     /// (most-negative / -1), returns 0.
-    BitVec smod(const BitVec &rhs) const; // TODO: implement
+    BitVec smod(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "smod");
+      const std::size_t w = width();
+      if(w == 0) return BitVec(0);
+      if(rhs.is_zero()) { return *this; }
+      if(is_most_negative() && rhs.is_all_ones()) return BitVec(w); // 0
+
+      BitVec r = srem(rhs);
+      if(r.is_zero()) { return r; }
+
+      const bool signR = r.is_negative();
+      const bool signY = rhs.is_negative();
+
+      if(signR != signY) {
+        // r += y (mod 2^w)
+        r = r.add(rhs);
+      }
+      return r;
+    }
 
     /// \brief Logical left shift by an unsigned amount in \p rhs.
     ///
     /// Shift amount is interpreted as an unsigned integer from \p rhs. If the
     /// amount >= width, the result is all zeros.
-    BitVec shl(const BitVec &rhs) const; // TODO: implement
+    BitVec shl(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "shl");
+      const std::size_t w = width();
+      bool ge = _rhs_amount_ge_width(rhs, w);
+      if(ge) {
+        return BitVec::zeros(w); // all zeros
+      }
+      std::size_t amt = _rhs_amount_mod(rhs, w); // exact, since < w
+      BitVec out(w);
+      for(std::size_t i = w; i-- > 0;) {
+        if(i >= amt) out._bits[i] = _bits[i - amt];
+      }
+      return out;
+    }
 
     /// \brief Logical right shift by an unsigned amount in \p rhs.
     ///
     /// Shift amount is interpreted as unsigned. If the amount >= width, the
     /// result is all zeros.
-    BitVec lshr(const BitVec &rhs) const; // TODO: implement
+    BitVec lshr(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "lshr");
+      const std::size_t w = width();
+      bool ge = _rhs_amount_ge_width(rhs, w);
+      if(ge) {
+        return BitVec::zeros(w); // all zeros
+      }
+      std::size_t amt = _rhs_amount_mod(rhs, w);
+      BitVec out(w);
+      for(std::size_t i = 0; i < w; ++i) {
+        const std::size_t src = i + amt;
+        if(src < w) out._bits[i] = _bits[src];
+      }
+      return out;
+    }
 
     /// \brief Arithmetic right shift by an unsigned amount in \p rhs.
     ///
     /// Vacated bits are filled with the sign bit. If the amount >= width, the
     /// result is all sign bits (all 0s for non-negative, all 1s for negative).
-    BitVec ashr(const BitVec &rhs) const; // TODO: implement
+    BitVec ashr(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "ashr");
+      const std::size_t w = width();
+      const bool sign = is_negative();
+      bool ge = _rhs_amount_ge_width(rhs, w);
+      if(ge) { return sign ? BitVec::ones(w) : BitVec::zeros(w); }
+      std::size_t amt = _rhs_amount_mod(rhs, w);
+      BitVec out(w);
+      for(std::size_t i = 0; i < w; ++i) {
+        const std::size_t src = i + amt;
+        out._bits[i] = (src < w) ? _bits[src] : sign;
+      }
+      return out;
+    }
 
     /// \brief Unsigned comparison: \c *this < rhs.
     bool ult(const BitVec &rhs) const {
@@ -460,26 +617,58 @@ namespace btgly {
     }
 
     /// \brief Signed comparison: \c *this < rhs.
-    bool slt(const BitVec &rhs) const; // TODO: implement
+    bool slt(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "slt");
+      const bool sa = is_negative(), sb = rhs.is_negative();
+      if(sa != sb) {
+        return sa; // negative < positive
+      }
+      // Same sign: for negatives, reverse unsigned sense.
+      int cu = _compare_unsigned(*this, rhs);
+      return sa ? (cu > 0) : (cu < 0);
+    }
 
     /// \brief Signed comparison: \c *this \<= rhs.
-    bool sle(const BitVec &rhs) const; // TODO: implement
+    bool sle(const BitVec &rhs) const {
+      // TODO: specify
+      return !sgt(rhs);
+    }
 
     /// \brief Signed comparison: \c *this \>= rhs.
-    bool sge(const BitVec &rhs) const; // TODO: implement
+    bool sge(const BitVec &rhs) const {
+      // TODO: specify
+      return !slt(rhs);
+    }
 
     /// \brief Signed comparison: \c *this > rhs.
-    bool sgt(const BitVec &rhs) const; // TODO: implement
+    bool sgt(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "sgt");
+      const bool sa = is_negative(), sb = rhs.is_negative();
+      if(sa != sb) return !sa; // positive > negative
+      int cu = _compare_unsigned(*this, rhs);
+      return sa ? (cu < 0) : (cu > 0);
+    }
 
     /// \brief Bit-vector compare (SMT-LIB \c bvcomp).
     ///
     /// \returns A 1-bit vector equal to 1 iff \c *this == rhs, else 0.
-    BitVec comp(const BitVec &rhs) const; // TODO: implement
+    BitVec comp(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "comp");
+      BitVec out(1);
+      out._bits[0] = equals(rhs);
+      return out;
+    }
 
     /// \brief Negation overflow predicate.
     ///
     /// \returns \c true iff \c *this is the most-negative two's-complement value.
-    bool nego() const; // TODO: implement
+    bool nego() const {
+      // TODO: specify
+      return is_most_negative();
+    }
 
     /// \brief Unsigned addition overflow.
     ///
@@ -498,7 +687,16 @@ namespace btgly {
     /// \brief Signed addition overflow.
     ///
     /// \returns \c true iff adding as signed two's-complement overflows.
-    bool saddo(const BitVec &rhs) const; // TODO: implement
+    bool saddo(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "saddo");
+      if(width() == 0) return false;
+      BitVec sum = add(rhs);
+      const bool sa = is_negative();
+      const bool sb = rhs.is_negative();
+      const bool ss = sum.is_negative();
+      return (sa == sb) && (ss != sa);
+    }
 
     /// \brief Unsigned multiplication overflow.
     ///
@@ -522,7 +720,32 @@ namespace btgly {
     ///
     /// \returns \c true iff the exact two's-complement product cannot be
     /// represented in \c width bits.
-    bool smulo(const BitVec &rhs) const; // TODO: implement
+    bool smulo(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "smulo");
+      const std::size_t w = width();
+      // Sign-extend both to 2w and multiply (unsigned), then check that the
+      // upper w bits are a sign-extension of the sign bit of the low part.
+      std::vector<bool> a2(2 * w, false), b2(2 * w, false);
+      const bool sa = is_negative(), sb = rhs.is_negative();
+      // copy low
+      for(std::size_t i = 0; i < w; ++i) {
+        a2[i] = _bits[i];
+        b2[i] = rhs._bits[i];
+      }
+      // sign-extend
+      for(std::size_t i = w; i < 2 * w; ++i) {
+        a2[i] = sa;
+        b2[i] = sb;
+      }
+      std::vector<bool> prod(2 * w, false);
+      _mul(prod, a2, b2);
+      const bool sign = prod[w - 1];
+      for(std::size_t i = w; i < 2 * w; ++i) {
+        if(prod[i] != sign) { return true; }
+      }
+      return false;
+    }
 
     /// \brief Unsigned subtraction overflow (borrow).
     ///
@@ -535,24 +758,59 @@ namespace btgly {
     /// \brief Signed subtraction overflow.
     ///
     /// \returns \c true iff subtracting as signed two's-complement overflows.
-    bool ssubo(const BitVec &rhs) const; // TODO: implement
+    bool ssubo(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "ssubo");
+      BitVec diff = sub(rhs);
+      const bool sa = is_negative();
+      const bool sb = rhs.is_negative();
+      const bool sd = diff.is_negative();
+      return (sa != sb) && (sd != sa);
+    }
 
     /// \brief Signed division overflow.
     ///
     /// \returns \c true iff \c *this is most-negative and \p rhs is -1 (the only
     /// overflowing signed divide in two's-complement).
-    bool sdivo(const BitVec &rhs) const; // TODO: implement
+    bool sdivo(const BitVec &rhs) const {
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "sdivo");
+      return is_most_negative() && rhs.is_all_ones();
+    }
 
     /// \brief Return the unsigned decimal string representation.
     ///
     /// \returns The value interpreted as an unsigned integer, in base 10.
-    std::string u_to_int() const; // TODO: implement
+    std::string u_to_int() const {
+      // TODO: specify
+      // Build decimal by scanning from MSB to LSB: s = s*2 + bit
+      std::string s = "0";
+      int msb = _msb_index(_bits);
+      if(msb < 0) { return "0"; }
+      for(int i = msb; i >= 0; --i) {
+        _dec_mul_add(s, 2, 0);
+        if(_bits[static_cast<std::size_t>(i)]) {
+          _dec_mul_add(s, 1, 1); // +1
+        }
+      }
+      _trim_leading_zeros(s);
+      return s;
+    }
 
     /// \brief Return the signed decimal string representation.
     ///
     /// \returns The value interpreted as a signed two's-complement integer,
     /// in base 10.
-    std::string s_to_int() const; // TODO: implement
+    std::string s_to_int() const {
+      // TODO: specify
+      if(!is_negative()) { return u_to_int(); }
+
+      // magnitude = two's-complement negation
+      BitVec mag = this->neg();
+      std::string s = mag.u_to_int();
+      _trim_leading_zeros(s);
+      return "-" + s;
+    }
 
   private:
     /// \brief Bit storage (LSB-first; index 0 is the least significant bit).
@@ -627,6 +885,136 @@ namespace btgly {
       }
       return 0;
     }
+
+    // Unsigned division: compute quotient q (size w) and remainder r (dynamic).
+    static void _udivrem_bits(const std::vector<bool> &num, const std::vector<bool> &den, std::vector<bool> &q,
+                              std::vector<bool> &r) {
+      const std::size_t w = q.size();
+      r.clear(); // remainder, LSB-first dynamic
+      // Process bits from MSB to LSB.
+      for(std::size_t step = 0; step < w; ++step) {
+        const std::size_t i = w - 1 - step; // current source bit index
+        // r = (r << 1) | num[i]
+        r.insert(r.begin(), false); // left shift by 1 (multiply by 2)
+        if(!r.empty()) { r[0] = num[i]; }
+        _trim_bits(r);
+        // if r >= den then r -= den, q[i] = 1 else 0
+        if(_cmp_arb_unsigned(r, den) >= 0) {
+          _sub_arb_unsigned_in_place(r, den);
+          q[i] = true;
+        } else {
+          q[i] = false;
+        }
+      }
+      _trim_bits(r);
+    }
+
+    // Compare arbitrary-length LSB-first vectors (unsigned).
+    static int _cmp_arb_unsigned(const std::vector<bool> &a, const std::vector<bool> &b) {
+      const int ma = _msb_index(a);
+      const int mb = _msb_index(b);
+      if(ma != mb) return (ma < mb) ? -1 : 1;
+      for(int i = ma; i >= 0; --i) {
+        const bool abit = a[static_cast<std::size_t>(i)];
+        const bool bbit = b[static_cast<std::size_t>(i)];
+        if(abit != bbit) return abit ? 1 : -1;
+      }
+      return 0;
+    }
+
+    // a -= b, assumes a >= b (unsigned), arbitrary-length LSB-first.
+    static void _sub_arb_unsigned_in_place(std::vector<bool> &a, const std::vector<bool> &b) {
+      bool borrow = false;
+      const std::size_t n = std::max(a.size(), b.size());
+      if(a.size() < n) a.resize(n, false);
+      for(std::size_t i = 0; i < n; ++i) {
+        const bool ai = (i < a.size()) ? a[i] : false;
+        const bool bi = (i < b.size()) ? b[i] : false;
+        const bool diff = (ai ^ bi) ^ borrow;
+        borrow = (!ai & bi) | ((!(ai) | bi) & borrow);
+        a[i] = diff;
+      }
+      _trim_bits(a);
+    }
+
+    static void _trim_bits(std::vector<bool> &v) {
+      // Remove leading zeros in MSB direction (but keep at least one 0 if empty).
+      int m = _msb_index(v);
+      if(m < 0) {
+        v.clear();
+      } else if(static_cast<std::size_t>(m + 1) < v.size()) {
+        v.resize(static_cast<std::size_t>(m + 1));
+      }
+    }
+
+    static int _msb_index(const std::vector<bool> &v) {
+      for(int i = static_cast<int>(v.size()) - 1; i >= 0; --i)
+        if(v[static_cast<std::size_t>(i)]) return i;
+      return -1;
+    }
+
+    static void _dec_mul_add(std::string &s, int mul, int add) {
+      int carry = add;
+      for(int i = static_cast<int>(s.size()) - 1; i >= 0; --i) {
+        int d = (s[static_cast<std::size_t>(i)] - CodePoint::$0) * mul + carry;
+        s[static_cast<std::size_t>(i)] = static_cast<char>(CodePoint::$0 + (d % 10));
+        carry = d / 10;
+      }
+      while(carry > 0) {
+        s.insert(s.begin(), static_cast<char>(CodePoint::$0 + (carry % 10)));
+        carry /= 10;
+      }
+    }
+
+    static std::size_t _rhs_amount_mod(const BitVec &amt, std::size_t mod) {
+      if(mod == 0) { return 0; }
+      // Horner: ((...((0*2 + bN)*2 + bN-1)... ) % mod)
+      std::size_t r = 0;
+      for(int i = _msb_index(amt._bits); i >= 0; --i) {
+        r = (r * 2) % mod;
+        if(amt._bits[static_cast<std::size_t>(i)]) { r = (r + 1) % mod; }
+      }
+      return r;
+    }
+
+    static bool _rhs_amount_ge_width(const BitVec &amt, std::size_t w) {
+      if(w == 0) {
+        return true; // treat as >=
+      }
+      // Compare value(amt) >= w using bitwise comparison against binary(w).
+      int ma = _msb_index(amt._bits);
+      if(ma < 0) {
+        return false; // 0 < w (assuming w>0)
+      }
+      int mw = 0;
+      {
+        std::size_t tmp = w;
+        while((tmp >> (mw + 1)) != 0) ++mw;
+        if(w == 1) mw = 0; // fix for w=1
+        // For w power-of-two, mw == log2(w). Numbers with msb > mw are >= w,
+        // with msb == mw we must compare bits.
+        while((static_cast<std::size_t>(1) << mw) > w && mw > 0) {
+          --mw; // guard
+        }
+        while(((static_cast<std::size_t>(1) << (mw + 1)) <= w)) { ++mw; }
+      }
+      if(ma > mw) { return true; }
+      if(ma < mw) { return false; }
+      // msb equal; compare bit by bit from mw..0
+      for(int i = mw; i >= 0; --i) {
+        const bool abit = amt._bits[static_cast<std::size_t>(i)];
+        const bool wbit = ((w >> i) & 1u) != 0;
+        if(abit != wbit) {
+          return abit; // true if abit==1 and wbit==0
+        }
+      }
+      return true; // equal
+    }
+
+    /*void ensureSameWidth(const BitVec &rhs, const char *op) const {
+        if (width() != rhs.width())
+          throw std::invalid_argument(std::string(op) + ": width mismatch");
+    }*/
   };
 
 } // namespace btgly
