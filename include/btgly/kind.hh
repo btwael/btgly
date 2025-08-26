@@ -3,7 +3,7 @@
 // Created by Wael-Amine Boutglay
 //
 // This file declares a simple `Kind` class template that can be used to build
-// runtime type hierarchies for classification purposes.
+// runtime type hierarchies.
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +12,8 @@
 #include <string>
 
 namespace btgly {
+
+  //*-- Kind<T>
 
   /// Kind implements a simple hierarchical classification that can be used to
   /// describe relationships between runtime entities.

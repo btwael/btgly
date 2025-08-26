@@ -12,6 +12,8 @@
 
 namespace btgly {
 
+  //*-- CodePoint
+
   /// CodePoint provides constants for ASCII characters and helper predicates
   /// for classifying code points.
   class CodePoint {
