@@ -36,6 +36,8 @@ namespace btgly {
 
     //*- properties
 
+    const std::vector<bool> &bits() const { return _bits; }
+
     /// \brief Return the number of bits in this bit-vector.
     std::size_t width() const;
 
