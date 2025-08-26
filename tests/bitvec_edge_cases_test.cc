@@ -76,3 +76,40 @@ TEST(BitVecMisc, RepeatExtractAndOverflowFalse) {
   BitVec sdivoRhs = BitVec::from_int("2", 4);
   EXPECT_FALSE(sdivoLhs.sdivo(sdivoRhs));
 }
+
+TEST(BitVecParsing, SignPrefixesAndLargeDecimal) {
+  BitVec plus = BitVec::from_int("+42", 8);
+  EXPECT_EQ(plus.u_to_int(), "42");
+  BitVec negBin = BitVec::from_int("-0b1010", 5);
+  EXPECT_EQ(negBin.s_to_int(), "-10");
+  BitVec negHex = BitVec::from_int("-0x1F", 8);
+  EXPECT_EQ(negHex.s_to_int(), "-31");
+  BitVec bigDec = BitVec::from_int("12345678901234567890", 64);
+  EXPECT_EQ(bigDec.u_to_int(), "12345678901234567890");
+}
+
+TEST(BitVecShiftRotate, ZeroAmountsAndZeroWidth) {
+  BitVec v = BitVec::from_int("0b1010", 4);
+  BitVec shl0 = v.shl(BitVec::zeros(4));
+  EXPECT_EQ(shl0.u_to_int(), "10");
+  BitVec lshr0 = v.lshr(BitVec::zeros(4));
+  EXPECT_EQ(lshr0.u_to_int(), "10");
+  BitVec ashr0 = BitVec::from_int("-4", 4).ashr(BitVec::zeros(4));
+  EXPECT_EQ(ashr0.s_to_int(), "-4");
+  BitVec zeroW = BitVec::zeros(0);
+  BitVec shlZW = zeroW.shl(BitVec::from_int("1", 1));
+  EXPECT_EQ(shlZW.width(), 0u);
+  BitVec lshrZW = zeroW.lshr(BitVec::from_int("1", 1));
+  EXPECT_EQ(lshrZW.width(), 0u);
+}
+
+TEST(BitVecSignedArith, MixedSigns) {
+  BitVec pos = BitVec::from_int("6", 4);
+  BitVec neg = BitVec::from_int("-2", 4);
+  BitVec sdiv = pos.sdiv(neg);
+  EXPECT_EQ(sdiv.s_to_int(), "-3");
+  BitVec srem = pos.srem(neg);
+  EXPECT_EQ(srem.s_to_int(), "0");
+  BitVec smod = BitVec::from_int("-7", 4).smod(BitVec::from_int("3", 4));
+  EXPECT_EQ(smod.s_to_int(), "2");
+}
