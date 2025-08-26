@@ -33,7 +33,7 @@ TEST(BitVecManipulation, BasicOps) {
   EXPECT_EQ(cat.u_to_int(), "172");
 
   BitVec ext = cat.extract(5, 2);
-  EXPECT_EQ(ext.u_to_int(), "12");
+  EXPECT_EQ(ext.u_to_int(), "11");
 
   BitVec rep = BitVec::from_int("0b10", 2).repeat(3);
   EXPECT_EQ(rep.u_to_int(), "42");
