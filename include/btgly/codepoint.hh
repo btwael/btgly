@@ -158,6 +158,13 @@ namespace btgly {
     /// Return true if `c` is a hexadecimal digit.
     static bool isHexadecimal(int c) { return ($0 <= c && c <= $9) || ($A <= c && c <= $F) || ($a <= c && c <= $f); }
 
+    static int hex_to_int(char c) {
+      if(c >= $0 && c <= $9) { return c - $0; }
+      if(c >= $a && c <= $f) { return 10 + (c - $a); }
+      if(c >= $A && c <= $F) { return 10 + (c - $A); }
+      return -1;
+    }
+
     /// Return true if `c` is an ASCII letter.
     static bool isLetter(int c) { return ($A <= c && c <= $Z) || ($a <= c && c <= $z); }
 
