@@ -3,6 +3,7 @@
 //
 
 #include "btgly/bitvec.hh"
+#include <stdexcept>
 
 namespace btgly {
 
