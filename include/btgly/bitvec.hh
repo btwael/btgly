@@ -14,10 +14,15 @@ namespace btgly {
   /// \brief Fixed-width bit-vector with SMT-LIB–style semantics.
   class BitVec {
   public:
-    /// \brief Construct a zero-initialized bit-vector of \p width bits.
-    ///
-    /// \param width Number of bits. Must be > 0.
-    explicit BitVec(std::size_t width) : _bits(width, 0) {}
+    explicit BitVec(std::size_t width) : _bits(width) {}
+
+    BitVec(bool value, std::size_t width) : _bits(width, value) {}
+
+    static BitVec zeros(std::size_t width) { return BitVec(0, width); }
+
+    static BitVec ones(std::size_t width) { return BitVec(1, width); }
+
+    static BitVec from_string(std::string string, std::size_t width);
 
     /// \brief Construct a bit-vector of \p width from an integer string.
     ///
@@ -67,7 +72,15 @@ namespace btgly {
     /// \param k Number of repetitions (k >= 0). If \p k == 0, the result has
     /// width 0.
     /// \returns A new bit-vector of width \c k * this->width().
-    BitVec repeat(std::size_t k) const; // TODO: implement
+    BitVec repeat(std::size_t k) const {
+      // TODO: specify
+      if(k == 0) { return BitVec::zeros(0); }
+      BitVec result(width() * k);
+      for(std::size_t r = 0; r < k; ++r) {
+        for(std::size_t i = 0; i < width(); ++i) { result._bits[r * width() + i] = _bits[i]; }
+      }
+      return result;
+    }
 
     /// \brief Sign-extend by \p k bits (two's-complement).
     ///
@@ -144,7 +157,7 @@ namespace btgly {
       //$ requires rhs.width() == this.width()
       //$ ensures return.width() == this.width()
       //$ ensures forall k: Int :: 0 <= k < rhs.width() => return[k] == (this[k] ^ rhs[k])
-      // TODO: ensureSameWidth(rhs, "xor");
+      // TODO: ensureSameWidth(rhs, "$xor");
       BitVec result(width());
       for(std::size_t i = 0; i < width(); ++i) { result._bits[i] = _bits[i] ^ rhs._bits[i]; }
       return result;
@@ -154,45 +167,97 @@ namespace btgly {
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) & rhs).
-    BitVec nand(const BitVec &rhs) const; // TODO: implement
+    BitVec nand(const BitVec &rhs) const {
+      // TODO: specify
+      return $and(rhs).$not();
+    }
 
     /// \brief Bitwise NOR: NOT(OR).
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) | rhs).
-    BitVec nor(const BitVec &rhs) const; // TODO: implement
+    BitVec nor(const BitVec &rhs) const {
+      // TODO: specify
+      return $or(rhs).$not();
+    }
 
     /// \brief Bitwise XNOR: NOT(XOR).
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) ^ rhs).
-    BitVec xnor(const BitVec &rhs) const; // TODO: implement
+    BitVec xnor(const BitVec &rhs) const {
+      // TODO: specify
+      return $xor(rhs).$not();
+    }
 
     /// \brief Reduction AND.
     ///
     /// \returns \c true iff all bits are 1 (width==0 returns \c true).
-    bool redand() const; // TODO: implement
+    bool redand() const {
+      // TODO: specify
+      for(bool b: _bits) {
+        if(!b) { return false; }
+      }
+      return true;
+    }
 
     /// \brief Reduction OR.
     ///
     /// \returns \c true iff any bit is 1 (width==0 returns \c false).
-    bool redor() const; // TODO: implement
+    bool redor() const {
+      // TODO: specify
+      for(bool b: _bits) {
+        if(b) { return true; };
+      }
+      return false;
+    }
 
     /// \brief Two's-complement negation.
     ///
     /// Equivalent to \c (~x + 1) modulo 2^width. Overflow (negation overflow)
     /// occurs only for the most-negative value (1000...0).
-    BitVec neg() const; // TODO: implement
+    BitVec neg() const {
+      //$ ensures return.width() == this.width()
+      // TODO: specify
+      // Return 0 - this (mod 2^w)
+      return BitVec::zeros(this->width()).sub(*this);
+    }
 
     /// \brief Unsigned/signed-agnostic modular addition.
     ///
     /// Result is \c (*this + rhs) mod 2^width.
-    BitVec add(const BitVec &rhs) const; // TODO: implement
+    BitVec add(const BitVec &rhs) const {
+      //$ requires rhs.width() == this.width()
+      //$ ensures return.width() == this.width()
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "add");
+      BitVec result(this->width());
+      bool carry = false;
+      for(std::size_t i = 0; i < width(); ++i) {
+        const bool a = _bits[i], b = rhs._bits[i];
+        result._bits[i] = (a ^ b) ^ carry;
+        carry = (a & b) | (a & carry) | (b & carry);
+      }
+      return result;
+    }
 
     /// \brief Unsigned/signed-agnostic modular subtraction.
     ///
     /// Result is \c (*this - rhs) mod 2^width.
-    BitVec sub(const BitVec &rhs) const; // TODO: implement
+    BitVec sub(const BitVec &rhs) const {
+      //$ requires rhs.width() == this.width()
+      //$ ensures return.width() == this.width()
+      // TODO: specify
+      // TODO: ensureSameWidth(rhs, "sub");
+      BitVec result(width());
+      bool borrow = false;
+      for(std::size_t i = 0; i < width(); ++i) {
+        const bool a = _bits[i], b = rhs._bits[i];
+        result._bits[i] = (a ^ b) ^ borrow;
+        borrow = (!a & b) | ((!(a) | b) & borrow);
+      }
+      return result;
+    }
 
     /// \brief Unsigned/signed-agnostic modular multiplication.
     ///
