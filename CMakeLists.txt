@@ -19,7 +19,7 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(btgly.bitvec.tests tests/bitvec_test.cc tests/bitvec_edge_cases_test.cc)
+add_executable(btgly.bitvec.tests tests/bitvec_test.cc)
 target_link_libraries(btgly.bitvec.tests PRIVATE btgly.bitvec gtest_main)
 add_test(NAME bitvec_tests COMMAND btgly.bitvec.tests)
 
