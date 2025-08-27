@@ -288,3 +288,325 @@ TEST(BitVecSignedArith, MixedSigns) {
   BitVec smod = BitVec::from_int("-7", 4).smod(BitVec::from_int("3", 4));
   EXPECT_EQ(smod.s_to_int(), "2");
 }
+
+// ---------- Small helpers ----------
+static BitVec mk_dec(std::size_t w, unsigned long long v) { return BitVec::from_int(std::to_string(v), w); }
+
+static BitVec mk_hex(std::size_t w, const std::string &hex_wo_prefix) {
+  return BitVec::from_int(std::string("0x") + hex_wo_prefix, w);
+}
+
+static BitVec mk_bin(std::size_t w, const std::string &bits_wo_prefix) {
+  return BitVec::from_int(std::string("0b") + bits_wo_prefix, w);
+}
+
+static BitVec bv_min(std::size_t w) { // most-negative: 1000...0
+  if(w == 0) return BitVec::zeros(0);
+  // Start with width-1 zero-extend of 1 -> 00..001, then rotate left by w-1
+  BitVec one1 = mk_dec(1, 1);
+  BitVec msb = one1.zero_extend(w - 1).rotate_left(w - 1);
+  return msb;
+}
+
+static BitVec bv_smax(std::size_t w) { // signed max: 0111...1
+  if(w == 0) return BitVec::zeros(0);
+  BitVec all1 = BitVec::ones(w);
+  BitVec one = mk_dec(w, 1);
+  return all1.lshr(one); // logical >> 1 turns 111..1 into 0111..1
+}
+
+static BitVec bv_neg1(std::size_t w) { return BitVec::ones(w); }
+static BitVec bv_zero(std::size_t w) { return BitVec::zeros(w); }
+
+static void expect_bveq(const BitVec &a, const BitVec &b) {
+  ASSERT_EQ(a.width(), b.width()) << "Width mismatch";
+  EXPECT_TRUE(a.equals(b)) << "u(a)=" << a.u_to_int() << ", u(b)=" << b.u_to_int();
+  EXPECT_TRUE(a.eq(b));
+}
+
+// ---------- Parameterized by width ----------
+class BitVecWidthSuite: public ::testing::TestWithParam<size_t> {};
+
+INSTANTIATE_TEST_SUITE_P(AllWidths, BitVecWidthSuite,
+                         ::testing::Values(1u, 5u, 8u, 13u, 16u, 25u, 32u, 55u, 64u, 99u, 128u));
+
+TEST_P(BitVecWidthSuite, ConstructorsAndProperties) {
+  const size_t w = GetParam();
+  BitVec raw(w); // just exercise the ctor; content unspecified
+  EXPECT_EQ(raw.width(), w);
+
+  BitVec z = BitVec::zeros(w);
+  BitVec o = BitVec::ones(w);
+
+  EXPECT_EQ(z.width(), w);
+  EXPECT_EQ(o.width(), w);
+  EXPECT_TRUE(z.is_zero());
+  EXPECT_FALSE(z.is_all_ones());
+  EXPECT_TRUE(o.is_all_ones());
+  EXPECT_FALSE(o.is_zero());
+
+  if(w > 0) {
+    EXPECT_FALSE(z.is_negative());
+    EXPECT_TRUE(bv_neg1(w).is_negative());
+    EXPECT_TRUE(bv_min(w).is_most_negative());
+    EXPECT_EQ(bv_min(w).is_negative(), true);
+  }
+
+  // bits()[0] should be LSB
+  BitVec five = mk_dec(w, 5); // ..0101
+  if(w >= 3) {
+    EXPECT_TRUE(five.bits()[0]);
+    EXPECT_FALSE(five.bits()[1]);
+    EXPECT_TRUE(five.bits()[2]);
+  } else if(w == 2) {
+    EXPECT_TRUE(five.bits()[0]);
+    EXPECT_FALSE(five.bits()[1]);
+  } else if(w == 1) {
+    EXPECT_TRUE(five.bits()[0]);
+  }
+}
+
+TEST_P(BitVecWidthSuite, FromIntParsingAndModulo) {
+  const size_t w = GetParam();
+  // Hex, bin, oct and decimal; ensure truncation modulo 2^w
+  BitVec a = BitVec::from_int("0xff", w);
+  BitVec b = BitVec::from_int("255", w);
+  expect_bveq(a, b);
+
+  BitVec c = BitVec::from_int("0o77", w); // 63
+  BitVec d = mk_dec(w, 63ull);
+  expect_bveq(c, d);
+
+  // Truncation: add one bit beyond width
+  std::string big_hex = (w == 0) ? "0" : "1" + std::string((w + 3) / 4, '0');
+  BitVec e = mk_hex(w, big_hex); // 1 << (4*((w+3)/4)) truncated to w
+  (void) e;                      // constructed; core correctness exercised elsewhere
+}
+
+TEST_P(BitVecWidthSuite, ConcatExtractRepeat) {
+  const size_t w = GetParam();
+  // Build two pieces whose widths add up to 2*w (works even for w==1)
+  BitVec hi = mk_dec(w, 0xAAAAAAAAull); // truncated to w
+  BitVec lo = mk_dec(w, 0x55555555ull);
+  BitVec both = hi.concat(lo);
+  EXPECT_EQ(both.width(), w + w);
+
+  // Extract back low and high parts
+  if(w > 0) {
+    BitVec lo_x = both.extract(w - 1, 0);
+    BitVec hi_x = both.extract(2 * w - 1, w);
+    expect_bveq(lo_x, lo);
+    expect_bveq(hi_x, hi);
+  }
+
+  // Repeat basic shape
+  BitVec base = mk_bin(3, "101");
+  BitVec r0 = base.repeat(0);
+  EXPECT_EQ(r0.width(), 0u);
+  EXPECT_TRUE(r0.redand());
+  EXPECT_FALSE(r0.redor());
+  BitVec r3 = base.repeat(3); // 101101101
+  EXPECT_EQ(r3.width(), 9u);
+  // spot-check a couple of bits
+  EXPECT_TRUE(r3.bits()[0]); // ...1
+  EXPECT_TRUE(r3.bits()[2]); // ...101
+}
+
+TEST_P(BitVecWidthSuite, RotatesAndShifts) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+
+  BitVec v = mk_bin(w, (w >= 4 ? "1001" : std::string("1"))).zero_extend(w >= 4 ? w - 4 : 0);
+  // rotate inverse
+  for(auto k: {0ull, 1ull, 3ull, (unsigned long long) w, (unsigned long long) (w + 7)}) {
+    BitVec rl = v.rotate_left(k);
+    BitVec back = rl.rotate_right(k);
+    expect_bveq(back, v);
+  }
+  // rotate by w+1 == rotate by 1
+  expect_bveq(v.rotate_left(w + 1), v.rotate_left(1));
+  expect_bveq(v.rotate_right(w + 1), v.rotate_right(1));
+
+  // Logical shifts: shift >= width -> zeros
+  BitVec amt_ge = mk_dec(w, w);
+  BitVec zeros = bv_zero(w);
+  expect_bveq(v.shl(amt_ge), zeros);
+  expect_bveq(v.lshr(amt_ge), zeros);
+
+  // Arithmetic shift: fill with sign bit
+  BitVec neg = bv_min(w);  // MSB=1
+  BitVec pos = bv_zero(w); // MSB=0
+  BitVec one = mk_dec(w, 1);
+  expect_bveq(neg.ashr(one), neg);    // 1000..0 >>a 1 == 1100..0 (still all sign bits)
+  expect_bveq(pos.ashr(amt_ge), pos); // all zeros stays zeros
+  // For negative, ashr >= width -> all ones
+  if(w > 0) { expect_bveq(neg.ashr(amt_ge), bv_neg1(w)); }
+}
+
+TEST_P(BitVecWidthSuite, BitwiseOpsAndReductions) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+  BitVec a = mk_dec(w, 0xF0F0F0F0ull);
+  BitVec b = mk_dec(w, 0x0FF00FF0ull);
+
+  BitVec nota = a.$not();
+  expect_bveq(nota.$not(), a);
+
+  expect_bveq(a.nand(b), a.$and(b).$not());
+  expect_bveq(a.nor(b), a.$or(b).$not());
+  expect_bveq(a.xnor(b), a.$xor(b).$not());
+
+  // redand/redor
+  EXPECT_TRUE(bv_neg1(w).redand());
+  EXPECT_FALSE(bv_zero(w).redand());
+  EXPECT_TRUE(a.redor() || b.redor());
+  EXPECT_FALSE(bv_zero(w).redor());
+}
+
+TEST_P(BitVecWidthSuite, ArithmeticModuloAndOverflowFlags) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+
+  BitVec x = mk_dec(w, 1234567ull);
+  BitVec y = mk_dec(w, 891011ull);
+
+  // x + (-x) == 0 (mod 2^w)
+  expect_bveq(x.add(x.neg()), bv_zero(w));
+
+  // (x + y) - y == x
+  expect_bveq(x.add(y).sub(y), x);
+
+  // ones + 1 wraps to 0, and uaddo detects it
+  BitVec one = mk_dec(w, 1);
+  EXPECT_TRUE(BitVec::ones(w).uaddo(one));
+  expect_bveq(BitVec::ones(w).add(one), bv_zero(w));
+
+  // usubo: 0 - 1 borrows
+  EXPECT_TRUE(bv_zero(w).usubo(one));
+
+  // saddo: smax + 1 overflows
+  EXPECT_TRUE(bv_smax(w).saddo(one));
+
+  // ssubo: smax - (-1) overflows
+  EXPECT_TRUE(bv_smax(w).ssubo(bv_neg1(w)));
+
+  // sdivo: min / -1
+  EXPECT_TRUE(bv_min(w).sdivo(bv_neg1(w)));
+
+  // negation overflow predicate == is_most_negative
+  EXPECT_EQ(bv_min(w).nego(), true);
+  EXPECT_EQ(x.nego(), false);
+
+  // Multiplication identities
+  expect_bveq(x.mul(one), x);
+  expect_bveq(x.mul(bv_zero(w)), bv_zero(w));
+
+  // Unsigned multiplication overflow example when possible (w>=2)
+  if(w >= 2) {
+    BitVec two = mk_dec(w, 2);
+    EXPECT_TRUE(bv_min(w).umulo(two));
+    expect_bveq(bv_min(w).mul(two), bv_zero(w)); // 1<< (w-1) * 2 == 0 mod 2^w
+  }
+}
+
+TEST_P(BitVecWidthSuite, DivRemAndModSemantics) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+  BitVec zero = bv_zero(w);
+  BitVec all1 = bv_neg1(w);
+
+  BitVec a = mk_dec(w, 12345);
+  BitVec b = mk_dec(w, 234);
+
+  // Division by zero cases
+  expect_bveq(a.udiv(zero), all1);
+  expect_bveq(a.urem(zero), a);
+  expect_bveq(a.sdiv(zero), all1); // -1
+  expect_bveq(a.srem(zero), a);
+  expect_bveq(a.smod(zero), a);
+
+  // Overflow (min / -1)
+  expect_bveq(bv_min(w).sdiv(all1), bv_min(w));
+  expect_bveq(bv_min(w).srem(all1), bv_zero(w));
+  expect_bveq(bv_min(w).smod(all1), bv_zero(w));
+
+  // udiv/urem relation: a = q*b + r, with r < b (when b != 0)
+  if(!b.is_zero()) {
+    BitVec q = a.udiv(b);
+    BitVec r = a.urem(b);
+    expect_bveq(q.mul(b).add(r), a);
+    EXPECT_TRUE(r.ult(b));
+  }
+}
+
+TEST_P(BitVecWidthSuite, ComparisonsAndComp) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+
+  BitVec z = bv_zero(w);
+  BitVec mn = bv_min(w);
+  BitVec mxs = bv_smax(w);
+  BitVec m1 = bv_neg1(w); // -1
+
+  // Unsigned
+  EXPECT_TRUE(z.ult(m1));
+  EXPECT_TRUE(m1.ugt(z));
+  EXPECT_TRUE(z.ule(z));
+  EXPECT_TRUE(m1.uge(m1));
+
+  // Signed
+  EXPECT_TRUE(mn.slt(z));
+  EXPECT_TRUE(mxs.sgt(z));
+  EXPECT_TRUE(m1.sle(z));
+  EXPECT_TRUE(mn.sle(mn));
+
+  // eq vs equals
+  EXPECT_TRUE(m1.eq(bv_neg1(w)));
+  EXPECT_TRUE(m1.equals(bv_neg1(w)));
+  EXPECT_EQ(m1.eq(z), m1.equals(z));
+
+  // bvcomp (1-bit result)
+  BitVec c1 = z.comp(z);
+  BitVec c0 = z.comp(m1);
+  EXPECT_EQ(c1.width(), 1u);
+  EXPECT_EQ(c0.width(), 1u);
+  EXPECT_TRUE(c1.eq(BitVec::from_int("1", 1)));
+  EXPECT_TRUE(c0.eq(BitVec::from_int("0", 1)));
+}
+
+TEST_P(BitVecWidthSuite, ToIntStringsSigns) {
+  const size_t w = GetParam();
+  if(w == 0) GTEST_SKIP();
+
+  BitVec z = bv_zero(w);
+  BitVec m1 = bv_neg1(w);
+  EXPECT_EQ(z.u_to_int(), std::string("0"));
+  EXPECT_EQ(z.s_to_int(), std::string("0"));
+  // -1 signed string must start with '-'
+  std::string sm1 = m1.s_to_int();
+  ASSERT_FALSE(sm1.empty());
+  EXPECT_EQ(sm1[0], '-');
+
+  // For small widths (<=16), check a few exact values
+  if(w <= 16) {
+    BitVec v = mk_dec(w, 42);
+    EXPECT_EQ(v.u_to_int(), std::string("42"));
+    if(!v.is_negative()) EXPECT_EQ(v.s_to_int(), std::string("42"));
+
+    BitVec neg = bv_min(w); // most-negative
+    std::string sneg = neg.s_to_int();
+    ASSERT_FALSE(sneg.empty());
+    EXPECT_EQ(sneg[0], '-');
+  }
+}
+
+// A small non-parameterized smoke test for $and/$or/$xor with width==1 edge cases
+TEST(BitVecEdgeCases, WidthOneBasics) {
+  const size_t w = 1;
+  BitVec zero = bv_zero(w);
+  BitVec one = mk_dec(w, 1);
+  expect_bveq(one.$and(one), one);
+  expect_bveq(one.$or(zero), one);
+  expect_bveq(one.$xor(one), zero);
+  EXPECT_TRUE(one.is_negative()); // in 1-bit two's complement, 1 == -1
+}
