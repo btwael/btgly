@@ -97,10 +97,13 @@ namespace btgly {
 
   bool BitVec::is_zero() const { return !redor(); }
 
-  bool BitVec::is_negative() const { return _bits[this->width() - 1]; }
+  bool BitVec::is_negative() const {
+    return width() == 0 ? false : _bits[width() - 1];
+  }
 
   bool BitVec::is_most_negative() const {
     const std::size_t w = width();
+    if(w == 0) { return false; }
     if(!_bits[w - 1]) {
       return false; // sign bit must be 1
     }
@@ -150,7 +153,7 @@ namespace btgly {
   BitVec BitVec::sign_extend(std::size_t k) const {
     // TODO: specify
     BitVec result(0, this->width() + k);
-    const bool sign = _bits[width() - 1];
+    const bool sign = width() == 0 ? false : _bits[width() - 1];
     for(std::size_t i = 0; i < this->width(); ++i) { result._bits[i] = _bits[i]; }
     for(std::size_t i = this->width(); i < result.width(); ++i) { result._bits[i] = sign; }
     return result;
@@ -166,6 +169,7 @@ namespace btgly {
   BitVec BitVec::rotate_left(std::size_t k) const {
     // TODO: specify
     const std::size_t w = width();
+    if(w == 0) return BitVec(0);
     k %= w;
     BitVec out(w);
     for(std::size_t i = 0; i < w; ++i) {
@@ -179,6 +183,7 @@ namespace btgly {
   BitVec BitVec::rotate_right(std::size_t k) const {
     // TODO: specify
     const std::size_t w = width();
+    if(w == 0) return BitVec(0);
     k %= w;
     BitVec out(w);
     for(std::size_t i = 0; i < w; ++i) {
@@ -792,34 +797,18 @@ namespace btgly {
 
   bool BitVec::_rhs_amount_ge_width(const BitVec &amt, std::size_t w) {
     if(w == 0) {
-      return true; // treat as >=
+      return true; // any amount >= 0 when width==0
     }
-    // Compare value(amt) >= w using bitwise comparison against binary(w).
     int ma = _msb_index(amt._bits);
-    if(ma < 0) {
-      return false; // 0 < w (assuming w>0)
-    }
+    if(ma < 0) { return false; }
     int mw = 0;
-    {
-      std::size_t tmp = w;
-      while((tmp >> (mw + 1)) != 0) ++mw;
-      if(w == 1) mw = 0; // fix for w=1
-      // For w power-of-two, mw == log2(w). Numbers with msb > mw are >= w,
-      // with msb == mw we must compare bits.
-      while((static_cast<std::size_t>(1) << mw) > w && mw > 0) {
-        --mw; // guard
-      }
-      while(((static_cast<std::size_t>(1) << (mw + 1)) <= w)) { ++mw; }
-    }
+    for(std::size_t tmp = w >> 1; tmp > 0; tmp >>= 1) { ++mw; }
     if(ma > mw) { return true; }
     if(ma < mw) { return false; }
-    // msb equal; compare bit by bit from mw..0
     for(int i = mw; i >= 0; --i) {
       const bool abit = amt._bits[static_cast<std::size_t>(i)];
       const bool wbit = ((w >> i) & 1u) != 0;
-      if(abit != wbit) {
-        return abit; // true if abit==1 and wbit==0
-      }
+      if(abit != wbit) return abit; // true if amt bit is 1 when w bit 0
     }
     return true; // equal
   }

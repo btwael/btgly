@@ -31,7 +31,7 @@ namespace btgly {
     /// The value is reduced modulo 2^width (i.e., truncated to \p width bits).
     ///
     /// \param integer The textual integer value (e.g., "42", "0xff", "0b1010").
-    /// \param width   Number of bits. Must be > 0.
+    /// \param width   Number of bits (may be 0).
     static BitVec from_int(std::string s, std::size_t width);
 
     //*- properties
