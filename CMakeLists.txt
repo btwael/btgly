@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 include_directories(include)
 
 add_library(btgly.bitvec STATIC src/bitvec.cc)
+add_library(btgly.strbitvec STATIC src/strbitvec.cc)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -19,7 +20,7 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(btgly.bitvec.tests tests/bitvec_test.cc)
-target_link_libraries(btgly.bitvec.tests PRIVATE btgly.bitvec gtest_main)
+add_executable(btgly.bitvec.tests tests/bitvec_test.cc tests/strbitvec_test.cc)
+target_link_libraries(btgly.bitvec.tests PRIVATE btgly.bitvec btgly.strbitvec gtest_main)
 add_test(NAME bitvec_tests COMMAND btgly.bitvec.tests)
 
