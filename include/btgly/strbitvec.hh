@@ -6,27 +6,23 @@
 
 #include <vector>
 #include <string>
-#include <optional>
-#include <variant>
-#include <cstdint>
-#include <bit>
 #include "btgly/codepoint.hh"
 #include "btgly/radix.hh"
 
 namespace btgly {
 
-  //*-- BitVec
+  //*-- StrBitVec
 
   /// \brief Fixed-width bit-vector with SMT-LIB–style semantics.
-  class BitVec {
+  class StrBitVec {
   public:
-    explicit BitVec(std::size_t width);
+    explicit StrBitVec(std::size_t width);
 
-    BitVec(bool value, std::size_t width);
+    StrBitVec(bool value, std::size_t width);
 
-    static BitVec zeros(std::size_t width);
+    static StrBitVec zeros(std::size_t width);
 
-    static BitVec ones(std::size_t width);
+    static StrBitVec ones(std::size_t width);
 
     /// \brief Construct a bit-vector of \p width from an integer string.
     ///
@@ -36,11 +32,11 @@ namespace btgly {
     ///
     /// \param integer The textual integer value (e.g., "42", "0xff", "0b1010").
     /// \param width   Number of bits (may be 0).
-    static BitVec from_int(std::string s, std::size_t width);
+    static StrBitVec from_int(std::string s, std::size_t width);
 
     //*- properties
 
-    const std::vector<bool> &bits() const noexcept(false);
+    const std::vector<bool> &bits() const { return _bits; }
 
     /// \brief Return the number of bits in this bit-vector.
     std::size_t width() const;
@@ -59,7 +55,7 @@ namespace btgly {
     ///
     /// \param rhs Low-order bits to append.
     /// \returns A new bit-vector of combined width.
-    BitVec concat(const BitVec &rhs) const;
+    StrBitVec concat(const StrBitVec &rhs) const;
 
     /// \brief Extract bits \c [i : j] (inclusive), with \c i >= j.
     ///
@@ -69,14 +65,14 @@ namespace btgly {
     /// \param i High bit index (inclusive).
     /// \param j Low bit index  (inclusive).
     /// \returns A new bit-vector of width \c (i - j + 1).
-    BitVec extract(std::size_t i, std::size_t j) const;
+    StrBitVec extract(std::size_t i, std::size_t j) const;
 
     /// \brief Repeat this bit-vector \p k times by concatenation.
     ///
     /// \param k Number of repetitions (k >= 0). If \p k == 0, the result has
     /// width 0.
     /// \returns A new bit-vector of width \c k * this->width().
-    BitVec repeat(std::size_t k) const;
+    StrBitVec repeat(std::size_t k) const;
 
     /// \brief Sign-extend by \p k bits (two's-complement).
     ///
@@ -84,7 +80,7 @@ namespace btgly {
     /// \c width()-1). Result width is \c width()+k.
     ///
     /// \param k Number of bits to add.
-    BitVec sign_extend(std::size_t k) const;
+    StrBitVec sign_extend(std::size_t k) const;
 
     /// \brief Zero-extend by \p k bits.
     ///
@@ -92,60 +88,60 @@ namespace btgly {
     /// \c width()+k.
     ///
     /// \param k Number of bits to add.
-    BitVec zero_extend(std::size_t k) const;
+    StrBitVec zero_extend(std::size_t k) const;
 
     /// \brief Rotate left by \p k (mod \c width()).
     ///
     /// \param k Rotation amount (any size; taken modulo \c width()).
     /// \returns A bitwise rotation; width unchanged.
-    BitVec rotate_left(std::size_t k) const;
+    StrBitVec rotate_left(std::size_t k) const;
 
     /// \brief Rotate right by \p k (mod \c width()).
     ///
     /// \param k Rotation amount (any size; taken modulo \c width()).
     /// \returns A bitwise rotation; width unchanged.
-    BitVec rotate_right(std::size_t k) const;
+    StrBitVec rotate_right(std::size_t k) const;
 
     /// \brief Bitwise NOT (~).
     ///
     /// \returns A bit-vector where each bit is inverted.
-    BitVec $not() const;
+    StrBitVec $not() const;
 
     /// \brief Bitwise AND.
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c (*this) & rhs.
-    BitVec $and(const BitVec &rhs) const;
+    StrBitVec $and(const StrBitVec &rhs) const;
 
     /// \brief Bitwise OR.
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c (*this) | rhs.
-    BitVec $or(const BitVec &rhs) const;
+    StrBitVec $or(const StrBitVec &rhs) const;
 
     /// \brief Bitwise XOR.
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c (*this) ^ rhs.
-    BitVec $xor(const BitVec &rhs) const;
+    StrBitVec $xor(const StrBitVec &rhs) const;
 
     /// \brief Bitwise NAND: NOT(AND).
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) & rhs).
-    BitVec nand(const BitVec &rhs) const;
+    StrBitVec nand(const StrBitVec &rhs) const;
 
     /// \brief Bitwise NOR: NOT(OR).
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) | rhs).
-    BitVec nor(const BitVec &rhs) const;
+    StrBitVec nor(const StrBitVec &rhs) const;
 
     /// \brief Bitwise XNOR: NOT(XOR).
     ///
     /// \param rhs Right-hand operand (same width).
     /// \returns \c ~((*this) ^ rhs).
-    BitVec xnor(const BitVec &rhs) const;
+    StrBitVec xnor(const StrBitVec &rhs) const;
 
     /// \brief Reduction AND.
     ///
@@ -161,35 +157,35 @@ namespace btgly {
     ///
     /// Equivalent to \c (~x + 1) modulo 2^width. Overflow (negation overflow)
     /// occurs only for the most-negative value (1000...0).
-    BitVec neg() const;
+    StrBitVec neg() const;
 
     /// \brief Unsigned/signed-agnostic modular addition.
     ///
     /// Result is \c (*this + rhs) mod 2^width.
-    BitVec add(const BitVec &rhs) const;
+    StrBitVec add(const StrBitVec &rhs) const;
 
     /// \brief Unsigned/signed-agnostic modular subtraction.
     ///
     /// Result is \c (*this - rhs) mod 2^width.
-    BitVec sub(const BitVec &rhs) const;
+    StrBitVec sub(const StrBitVec &rhs) const;
 
     /// \brief Unsigned/signed-agnostic modular multiplication.
     ///
     /// Result is \c (*this * rhs) mod 2^width.
-    BitVec mul(const BitVec &rhs) const;
+    StrBitVec mul(const StrBitVec &rhs) const;
 
     /// \brief Unsigned division (SMT-LIB \c bvudiv semantics), Div/0 -> all ones.
     ///
     /// \param rhs Divisor.
     /// \returns \c floor(u(*this) / u(rhs)), where \c u is the unsigned value.
     /// Division by zero yields a vector of all 1s.
-    BitVec udiv(const BitVec &rhs) const;
+    StrBitVec udiv(const StrBitVec &rhs) const;
 
     /// \brief Unsigned remainder (SMT-LIB \c bvurem semantics), Div/0 -> lhs.
     ///
     /// \param rhs Divisor.
     /// \returns \c u(*this) mod u(rhs). If \p rhs is zero, returns \c *this.
-    BitVec urem(const BitVec &rhs) const;
+    StrBitVec urem(const StrBitVec &rhs) const;
 
     /// \brief Signed division (two's-complement; SMT-LIB \c bvsdiv semantics).
     /// Div/0 -> -1. Overflow (min / -1) -> min.
@@ -197,7 +193,7 @@ namespace btgly {
     /// \returns Truncating division toward zero on signed values. Division by
     /// zero yields all 1s (i.e., -1). The overflow case (most-negative / -1)
     /// returns most-negative.
-    BitVec sdiv(const BitVec &rhs) const;
+    StrBitVec sdiv(const StrBitVec &rhs) const;
 
     /// \brief Signed remainder (SMT-LIB \c bvsrem semantics).
     /// Div/0 -> lhs. Overflow (min / -1) -> 0.
@@ -205,7 +201,7 @@ namespace btgly {
     /// \returns \c s(*this) - trunc(s(*this)/s(rhs)) * s(rhs), where \c s is the
     /// signed value. If \p rhs is zero, returns \c *this. In the overflow case
     /// (most-negative / -1), returns 0.
-    BitVec srem(const BitVec &rhs) const;
+    StrBitVec srem(const StrBitVec &rhs) const;
 
     /// \brief Signed modulo (SMT-LIB \c bvsmod semantics).
     /// Div/0 -> lhs. Overflow (min / -1) -> 0.
@@ -213,58 +209,58 @@ namespace btgly {
     /// \returns A value with the sign of \p rhs and magnitude < |rhs|. If
     /// \p rhs is zero, returns \c *this. In the overflow case
     /// (most-negative / -1), returns 0.
-    BitVec smod(const BitVec &rhs) const;
+    StrBitVec smod(const StrBitVec &rhs) const;
 
     /// \brief Logical left shift by an unsigned amount in \p rhs.
     ///
     /// Shift amount is interpreted as an unsigned integer from \p rhs. If the
     /// amount >= width, the result is all zeros.
-    BitVec shl(const BitVec &rhs) const;
+    StrBitVec shl(const StrBitVec &rhs) const;
 
     /// \brief Logical right shift by an unsigned amount in \p rhs.
     ///
     /// Shift amount is interpreted as unsigned. If the amount >= width, the
     /// result is all zeros.
-    BitVec lshr(const BitVec &rhs) const;
+    StrBitVec lshr(const StrBitVec &rhs) const;
 
     /// \brief Arithmetic right shift by an unsigned amount in \p rhs.
     ///
     /// Vacated bits are filled with the sign bit. If the amount >= width, the
     /// result is all sign bits (all 0s for non-negative, all 1s for negative).
-    BitVec ashr(const BitVec &rhs) const;
+    StrBitVec ashr(const StrBitVec &rhs) const;
 
     /// \brief Unsigned comparison: \c *this < rhs.
-    bool ult(const BitVec &rhs) const;
+    bool ult(const StrBitVec &rhs) const;
 
     /// \brief Unsigned comparison: \c *this \<= rhs.
-    bool ule(const BitVec &rhs) const;
+    bool ule(const StrBitVec &rhs) const;
 
     /// \brief Unsigned comparison: \c *this \>= rhs.
-    bool uge(const BitVec &rhs) const;
+    bool uge(const StrBitVec &rhs) const;
 
     /// \brief Unsigned comparison: \c *this > rhs.
-    bool ugt(const BitVec &rhs) const;
+    bool ugt(const StrBitVec &rhs) const;
 
-    bool eq(const BitVec &rhs) const;
+    bool eq(const StrBitVec &rhs) const;
 
-    bool equals(const BitVec &rhs) const;
+    bool equals(const StrBitVec &rhs) const;
 
     /// \brief Signed comparison: \c *this < rhs.
-    bool slt(const BitVec &rhs) const;
+    bool slt(const StrBitVec &rhs) const;
 
     /// \brief Signed comparison: \c *this \<= rhs.
-    bool sle(const BitVec &rhs) const;
+    bool sle(const StrBitVec &rhs) const;
 
     /// \brief Signed comparison: \c *this \>= rhs.
-    bool sge(const BitVec &rhs) const;
+    bool sge(const StrBitVec &rhs) const;
 
     /// \brief Signed comparison: \c *this > rhs.
-    bool sgt(const BitVec &rhs) const;
+    bool sgt(const StrBitVec &rhs) const;
 
     /// \brief Bit-vector compare (SMT-LIB \c bvcomp).
     ///
     /// \returns A 1-bit vector equal to 1 iff \c *this == rhs, else 0.
-    BitVec comp(const BitVec &rhs) const;
+    StrBitVec comp(const StrBitVec &rhs) const;
 
     /// \brief Negation overflow predicate.
     ///
@@ -274,40 +270,40 @@ namespace btgly {
     /// \brief Unsigned addition overflow.
     ///
     /// \returns \c true iff \c u(*this) + u(rhs) >= 2^width.
-    bool uaddo(const BitVec &rhs) const;
+    bool uaddo(const StrBitVec &rhs) const;
 
     /// \brief Signed addition overflow.
     ///
     /// \returns \c true iff adding as signed two's-complement overflows.
-    bool saddo(const BitVec &rhs) const;
+    bool saddo(const StrBitVec &rhs) const;
 
     /// \brief Unsigned multiplication overflow.
     ///
     /// \returns \c true iff the full unsigned product does not fit in \c width
     /// bits (i.e., any high bits beyond width are non-zero).
-    bool umulo(const BitVec &rhs) const;
+    bool umulo(const StrBitVec &rhs) const;
 
     /// \brief Signed multiplication overflow.
     ///
     /// \returns \c true iff the exact two's-complement product cannot be
     /// represented in \c width bits.
-    bool smulo(const BitVec &rhs) const;
+    bool smulo(const StrBitVec &rhs) const;
 
     /// \brief Unsigned subtraction overflow (borrow).
     ///
     /// \returns \c true iff \c u(*this) < u(rhs) (i.e., a borrow occurs).
-    bool usubo(const BitVec &rhs) const;
+    bool usubo(const StrBitVec &rhs) const;
 
     /// \brief Signed subtraction overflow.
     ///
     /// \returns \c true iff subtracting as signed two's-complement overflows.
-    bool ssubo(const BitVec &rhs) const;
+    bool ssubo(const StrBitVec &rhs) const;
 
     /// \brief Signed division overflow.
     ///
     /// \returns \c true iff \c *this is most-negative and \p rhs is -1 (the only
     /// overflowing signed divide in two's-complement).
-    bool sdivo(const BitVec &rhs) const;
+    bool sdivo(const StrBitVec &rhs) const;
 
     /// \brief Return the unsigned decimal string representation.
     ///
@@ -321,25 +317,6 @@ namespace btgly {
     std::string s_to_int() const;
 
   private:
-    std::size_t _width{0};
-
-    /// Inline representation for bit-vectors of width \<= 64.
-    using Small = std::uint64_t;
-    /// Dynamic representation for wider bit-vectors.
-    using Large = std::vector<bool>;
-
-    /// Variant storage holding either small or large representation.
-    std::variant<Small, Large> _storage;
-    /// Cached materialization of bits for small values (LSB-first).
-    mutable std::optional<Large> _cachedBits;
-
-    static constexpr Small mask(std::size_t w) noexcept;
-    static constexpr Small trim(Small v, std::size_t w) noexcept;
-    constexpr bool is_small() const noexcept;
-    constexpr Small as_small() const noexcept;
-    constexpr Large &large_ref() noexcept;
-    constexpr const Large &large_ref() const noexcept;
-
     /// \brief Bit storage (LSB-first; index 0 is the least significant bit).
     std::vector<bool> _bits;
 
@@ -353,7 +330,7 @@ namespace btgly {
     static void _mul(std::vector<bool> &acc, const std::vector<bool> &a, const std::vector<bool> &b);
 
     // TODO: static + rename to ucomp
-    static int _compare_unsigned(const BitVec &a, const BitVec &b);
+    static int _compare_unsigned(const StrBitVec &a, const StrBitVec &b);
 
     // Unsigned division: compute quotient q (size w) and remainder r (dynamic).
     static void _udivrem_bits(const std::vector<bool> &num, const std::vector<bool> &den, std::vector<bool> &q,
@@ -371,11 +348,11 @@ namespace btgly {
 
     static void _dec_mul_add(std::string &s, int mul, int add);
 
-    static std::size_t _rhs_amount_mod(const BitVec &amt, std::size_t mod);
+    static std::size_t _rhs_amount_mod(const StrBitVec &amt, std::size_t mod);
 
-    static bool _rhs_amount_ge_width(const BitVec &amt, std::size_t w);
+    static bool _rhs_amount_ge_width(const StrBitVec &amt, std::size_t w);
 
-    /*void ensureSameWidth(const BitVec &rhs, const char *op) const {
+    /*void ensureSameWidth(const StrBitVec &rhs, const char *op) const {
         if (width() != rhs.width())
           throw std::invalid_argument(std::string(op) + ": width mismatch");
     }*/
