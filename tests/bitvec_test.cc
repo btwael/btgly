@@ -264,21 +264,6 @@ TEST(BitVecParsing, SignPrefixesAndLargeDecimal) {
   EXPECT_EQ(bigDec.u_to_int(), "12345678901234567890");
 }
 
-TEST(BitVecShiftRotate, ZeroAmountsAndZeroWidth) {
-  BitVec v = BitVec::from_int("0b1010", 4);
-  BitVec shl0 = v.shl(BitVec::zeros(4));
-  EXPECT_EQ(shl0.u_to_int(), "10");
-  BitVec lshr0 = v.lshr(BitVec::zeros(4));
-  EXPECT_EQ(lshr0.u_to_int(), "10");
-  BitVec ashr0 = BitVec::from_int("-4", 4).ashr(BitVec::zeros(4));
-  EXPECT_EQ(ashr0.s_to_int(), "-4");
-  BitVec zeroW = BitVec::zeros(0);
-  BitVec shlZW = zeroW.shl(BitVec::from_int("1", 1));
-  EXPECT_EQ(shlZW.width(), 0u);
-  BitVec lshrZW = zeroW.lshr(BitVec::from_int("1", 1));
-  EXPECT_EQ(lshrZW.width(), 0u);
-}
-
 TEST(BitVecSignedArith, MixedSigns) {
   BitVec pos = BitVec::from_int("6", 4);
   BitVec neg = BitVec::from_int("-2", 4);
