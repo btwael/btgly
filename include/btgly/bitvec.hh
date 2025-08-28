@@ -374,12 +374,7 @@ namespace btgly {
 
     std::vector<bool> &_bits() const;
 
-    void _prepare_bits() const;
-
-    /*void ensureSameWidth(const BitVec &rhs, const char *op) const {
-        if (width() != rhs.width())
-          throw std::invalid_argument(std::string(op) + ": width mismatch");
-    }*/
+    void _ensure_same_width(const BitVec &rhs, const char *op) const;
   };
 
 } // namespace btgly
