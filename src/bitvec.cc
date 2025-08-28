@@ -115,13 +115,7 @@ namespace btgly {
 
   //*- properties
 
-  const std::vector<bool> &BitVec::bits() const {
-    if(is_small()) {
-      _prepare_bits();
-      return *_cached_bits;
-    }
-    return large_ref();
-  }
+  const std::vector<bool> &BitVec::bits() const { return _bits(); }
 
   std::size_t BitVec::width() const { return _width; }
 
