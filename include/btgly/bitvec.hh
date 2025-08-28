@@ -6,6 +6,10 @@
 
 #include <vector>
 #include <string>
+#include <optional>
+#include <variant>
+#include <cstdint>
+#include <bit>
 #include "btgly/codepoint.hh"
 #include "btgly/radix.hh"
 
@@ -36,7 +40,7 @@ namespace btgly {
 
     //*- properties
 
-    const std::vector<bool> &bits() const { return _bits; }
+    const std::vector<bool> &bits() const noexcept(false);
 
     /// \brief Return the number of bits in this bit-vector.
     std::size_t width() const;
@@ -317,6 +321,25 @@ namespace btgly {
     std::string s_to_int() const;
 
   private:
+    std::size_t _width{0};
+
+    /// Inline representation for bit-vectors of width \<= 64.
+    using Small = std::uint64_t;
+    /// Dynamic representation for wider bit-vectors.
+    using Large = std::vector<bool>;
+
+    /// Variant storage holding either small or large representation.
+    std::variant<Small, Large> _storage;
+    /// Cached materialization of bits for small values (LSB-first).
+    mutable std::optional<Large> _cachedBits;
+
+    static constexpr Small mask(std::size_t w) noexcept;
+    static constexpr Small trim(Small v, std::size_t w) noexcept;
+    constexpr bool is_small() const noexcept;
+    constexpr Small as_small() const noexcept;
+    constexpr Large &large_ref() noexcept;
+    constexpr const Large &large_ref() const noexcept;
+
     /// \brief Bit storage (LSB-first; index 0 is the least significant bit).
     std::vector<bool> _bits;
 
