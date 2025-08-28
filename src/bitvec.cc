@@ -321,7 +321,7 @@ namespace btgly {
     //$ ensures return._width == this._width
     //$ ensures forall k: Int :: 0 <= k < rhs._width => return[k] == (this[k] && rhs[k])
     _ensure_same_width(rhs, "$and");
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -342,7 +342,7 @@ namespace btgly {
     //$ ensures return._width == this._width
     //$ ensures forall k: Int :: 0 <= k < rhs._width => return[k] == (this[k] || rhs[k])
     _ensure_same_width(rhs, "$or");
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -363,7 +363,7 @@ namespace btgly {
     //$ ensures return._width == this._width
     //$ ensures forall k: Int :: 0 <= k < rhs._width => return[k] == (this[k] ^ rhs[k])
     _ensure_same_width(rhs, "$xor");
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -380,8 +380,9 @@ namespace btgly {
   }
 
   BitVec BitVec::nand(const BitVec &rhs) const {
+    _ensure_same_width(rhs, "nand");
     // Compute ~(this & rhs).
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -398,8 +399,9 @@ namespace btgly {
   }
 
   BitVec BitVec::nor(const BitVec &rhs) const {
+    _ensure_same_width(rhs, "nor");
     // Compute ~(this | rhs).
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -417,7 +419,8 @@ namespace btgly {
 
   BitVec BitVec::xnor(const BitVec &rhs) const {
     // Compute ~(this ^ rhs).
-    if(!(is_small() && rhs.is_small())) {
+    _ensure_same_width(rhs, "xnor");
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       for(std::size_t i = 0; i < _width; ++i) {
@@ -483,7 +486,7 @@ namespace btgly {
     //$ ensures return._width == this._width
     // Ripple-carry addition modulo 2^width.
     _ensure_same_width(rhs, "add");
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       bool carry = false;
@@ -507,7 +510,7 @@ namespace btgly {
     //$ ensures return._width == this._width
     // Subtract rhs from this using borrow propagation.
     _ensure_same_width(rhs, "sub");
-    if(!(is_small() && rhs.is_small())) {
+    if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
       bool borrow = false;
@@ -530,7 +533,7 @@ namespace btgly {
     // Multiply two bit-vectors modulo 2^width.
     _ensure_same_width(rhs, "mul");
     const std::size_t w = this->_width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       unsigned __int128 prod = static_cast<unsigned __int128>(as_small()) * rhs.as_small();
       Small val = trim(static_cast<Small>(prod), w);
       BitVec out(w);
@@ -553,7 +556,7 @@ namespace btgly {
     // Unsigned division with divisor 0 producing all ones.
     _ensure_same_width(rhs, "udiv");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small b = rhs.as_small();
       if(b == 0) {
         BitVec out(w);
@@ -583,7 +586,7 @@ namespace btgly {
     // Unsigned remainder; divisor 0 returns *this.
     _ensure_same_width(rhs, "urem");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small b = rhs.as_small();
       if(b == 0) return *this;
       Small r = trim(as_small() % b, w);
@@ -608,7 +611,7 @@ namespace btgly {
     // Signed division truncating toward zero.
     _ensure_same_width(rhs, "sdiv");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(w == 0) return BitVec(0);
       Small b = rhs.as_small();
       if(b == 0) {
@@ -653,7 +656,7 @@ namespace btgly {
     // Signed remainder with sign of dividend.
     _ensure_same_width(rhs, "srem");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(w == 0) return BitVec(0);
       Small b = rhs.as_small();
       if(b == 0) { return *this; }
@@ -691,7 +694,7 @@ namespace btgly {
     // Signed modulo with sign of divisor.
     _ensure_same_width(rhs, "smod");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(w == 0) return BitVec(0);
       Small b = rhs.as_small();
       if(b == 0) { return *this; }
@@ -732,7 +735,7 @@ namespace btgly {
     // Logical left shift by the amount given in rhs.
     if(_width != 0) _ensure_same_width(rhs, "shl");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return BitVec::zeros(w); }
       Small val = trim(as_small() << amt, w);
@@ -760,7 +763,7 @@ namespace btgly {
     // Logical right shift by the amount in rhs.
     if(_width != 0) _ensure_same_width(rhs, "lshr");
     const std::size_t w = _width;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return BitVec::zeros(w); }
       Small val = as_small() >> amt;
@@ -791,7 +794,7 @@ namespace btgly {
     if(_width != 0) _ensure_same_width(rhs, "ashr");
     const std::size_t w = _width;
     const bool sign = is_negative();
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return sign ? BitVec::ones(w) : BitVec::zeros(w); }
       Small val = as_small();
@@ -820,7 +823,7 @@ namespace btgly {
   bool BitVec::ult(const BitVec &rhs) const {
     // Unsigned comparison: this < rhs.
     _ensure_same_width(rhs, "ult");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
       return lhs < rhv;
@@ -831,7 +834,7 @@ namespace btgly {
   bool BitVec::ule(const BitVec &rhs) const {
     // Unsigned comparison: this <= rhs.
     _ensure_same_width(rhs, "ule");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
       return lhs <= rhv;
@@ -842,7 +845,7 @@ namespace btgly {
   bool BitVec::uge(const BitVec &rhs) const {
     // Unsigned comparison: this >= rhs.
     _ensure_same_width(rhs, "uge");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
       return lhs >= rhv;
@@ -853,7 +856,7 @@ namespace btgly {
   bool BitVec::ugt(const BitVec &rhs) const {
     // Unsigned comparison: this > rhs.
     _ensure_same_width(rhs, "ugt");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
       return lhs > rhv;
@@ -875,7 +878,7 @@ namespace btgly {
   bool BitVec::slt(const BitVec &rhs) const {
     // Signed comparison: this < rhs.
     _ensure_same_width(rhs, "slt");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(_width == 0) return false;
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
@@ -894,7 +897,7 @@ namespace btgly {
   bool BitVec::sle(const BitVec &rhs) const {
     // Signed comparison: this <= rhs.
     _ensure_same_width(rhs, "sle");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(_width == 0) return true;
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
@@ -913,7 +916,7 @@ namespace btgly {
   bool BitVec::sge(const BitVec &rhs) const {
     // Signed comparison: this >= rhs.
     _ensure_same_width(rhs, "sge");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(_width == 0) return true;
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
@@ -932,7 +935,7 @@ namespace btgly {
   bool BitVec::sgt(const BitVec &rhs) const {
     // Signed comparison: this > rhs.
     _ensure_same_width(rhs, "sgt");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(_width == 0) return false;
       Small lhs = trim(as_small(), _width);
       Small rhv = trim(rhs.as_small(), _width);
@@ -963,7 +966,7 @@ namespace btgly {
   bool BitVec::uaddo(const BitVec &rhs) const {
     // Detect unsigned addition overflow.
     _ensure_same_width(rhs, "uaddo");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = as_small();
       Small rhv = rhs.as_small();
       Small sum = lhs + rhv;
@@ -982,7 +985,7 @@ namespace btgly {
     // Detect signed addition overflow.
     _ensure_same_width(rhs, "saddo");
     if(_width == 0) return false;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = as_small();
       Small rhv = rhs.as_small();
       Small sum = trim(lhs + rhv, _width);
@@ -1001,7 +1004,7 @@ namespace btgly {
   bool BitVec::umulo(const BitVec &rhs) const {
     // Detect unsigned multiplication overflow.
     _ensure_same_width(rhs, "umulo");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       unsigned __int128 prod = static_cast<unsigned __int128>(as_small()) * rhs.as_small();
       return (prod >> _width) != 0;
     }
@@ -1020,7 +1023,7 @@ namespace btgly {
     _ensure_same_width(rhs, "smulo");
     const std::size_t w = _width;
     if(w == 0) return false;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       auto sx = [w](Small v) -> std::int64_t {
         return static_cast<std::int64_t>(static_cast<std::int64_t>(v << (64 - w)) >> (64 - w));
       };
@@ -1057,7 +1060,7 @@ namespace btgly {
   bool BitVec::usubo(const BitVec &rhs) const {
     // Detect unsigned subtraction overflow (borrow).
     _ensure_same_width(rhs, "usubo");
-    if(is_small() && rhs.is_small()) { return as_small() < rhs.as_small(); }
+    if(is_small()) { return as_small() < rhs.as_small(); }
     return ult(rhs);
   }
 
@@ -1065,7 +1068,7 @@ namespace btgly {
     // Detect signed subtraction overflow.
     _ensure_same_width(rhs, "ssubo");
     if(_width == 0) return false;
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       Small lhs = as_small();
       Small rhv = rhs.as_small();
       Small diff = trim(lhs - rhv, _width);
@@ -1084,7 +1087,7 @@ namespace btgly {
   bool BitVec::sdivo(const BitVec &rhs) const {
     // Detect signed division overflow (min / -1).
     _ensure_same_width(rhs, "sdivo");
-    if(is_small() && rhs.is_small()) {
+    if(is_small()) {
       if(_width == 0) return false;
       Small a = as_small();
       Small b = rhs.as_small();
