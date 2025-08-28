@@ -40,7 +40,7 @@ namespace btgly {
 
     //*- properties
 
-    const std::vector<bool> &bits() const noexcept(false);
+    const std::vector<bool> &bits() const;
 
     /// \brief Return the number of bits in this bit-vector.
     std::size_t width() const;
@@ -329,9 +329,9 @@ namespace btgly {
     using Large = std::vector<bool>;
 
     /// Variant storage holding either small or large representation.
-    std::variant<Small, Large> _storage;
+    mutable std::variant<Small, Large> _storage;
     /// Cached materialization of bits for small values (LSB-first).
-    mutable std::optional<Large> _cachedBits;
+    mutable std::optional<Large> _cached_bits;
 
     static constexpr Small mask(std::size_t w) noexcept;
     static constexpr Small trim(Small v, std::size_t w) noexcept;
@@ -339,9 +339,6 @@ namespace btgly {
     constexpr Small as_small() const noexcept;
     constexpr Large &large_ref() noexcept;
     constexpr const Large &large_ref() const noexcept;
-
-    /// \brief Bit storage (LSB-first; index 0 is the least significant bit).
-    std::vector<bool> _bits;
 
     static bool _is_decimal_zero(const std::string &s);
 
@@ -374,6 +371,10 @@ namespace btgly {
     static std::size_t _rhs_amount_mod(const BitVec &amt, std::size_t mod);
 
     static bool _rhs_amount_ge_width(const BitVec &amt, std::size_t w);
+
+    std::vector<bool> &_bits() const;
+
+    void _prepare_bits() const;
 
     /*void ensureSameWidth(const BitVec &rhs, const char *op) const {
         if (width() != rhs.width())
