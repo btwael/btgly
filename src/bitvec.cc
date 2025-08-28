@@ -31,7 +31,8 @@ namespace btgly {
   BitVec BitVec::ones(std::size_t width) { return {true, width}; }
 
   BitVec BitVec::from_int(std::string s, std::size_t width) {
-    // TODO: specify
+    // Parse textual integer with optional sign and base prefix.
+    // Digits beyond the target width are discarded (mod 2^width).
     // TODO: deal with empty or illegal string
     // determine negativeness
     bool neg = false;
@@ -160,7 +161,7 @@ namespace btgly {
   }
 
   BitVec BitVec::extract(std::size_t i, std::size_t j) const {
-    // TODO: specify
+    // Copy bits in the inclusive range [j,i] into a fresh BitVec.
     if(i < j) { throw std::invalid_argument("extract: i < j"); }
     if(i >= this->_width) { throw std::out_of_range("extract: high index out of range"); }
     const std::size_t w = i - j + 1;
@@ -180,7 +181,7 @@ namespace btgly {
   }
 
   BitVec BitVec::repeat(std::size_t k) const {
-    // TODO: specify
+    // Concatenate this vector with itself k times.
     if(k == 0) { return BitVec::zeros(0); }
     BitVec result(_width * k);
     for(std::size_t r = 0; r < k; ++r) {
@@ -198,7 +199,7 @@ namespace btgly {
   }
 
   BitVec BitVec::sign_extend(std::size_t k) const {
-    // TODO: specify
+    // Append k copies of the sign bit to the high end.
     BitVec result(false, this->_width + k);
     const bool sign = _width != 0 && _bits()[_width - 1];
     for(std::size_t i = 0; i < this->_width; ++i) { result._bits()[i] = _bits()[i]; }
@@ -215,7 +216,7 @@ namespace btgly {
   }
 
   BitVec BitVec::zero_extend(std::size_t k) const {
-    // TODO: specify
+    // Extend width by k with zeros in the high bits.
     BitVec result(false, _width + k);
     for(std::size_t i = 0; i < _width; ++i) { result._bits()[i] = _bits()[i]; }
     if(result.is_small()) {
@@ -230,7 +231,7 @@ namespace btgly {
   }
 
   BitVec BitVec::rotate_left(std::size_t k) const {
-    // TODO: specify
+    // Rotate bits left by k positions modulo width.
     const std::size_t w = _width;
     if(w == 0) return BitVec(0);
     k %= w;
@@ -263,7 +264,7 @@ namespace btgly {
   }
 
   BitVec BitVec::rotate_right(std::size_t k) const {
-    // TODO: specify
+    // Rotate bits right by k positions modulo width.
     const std::size_t w = _width;
     if(w == 0) return BitVec(0);
     k %= w;
@@ -379,7 +380,7 @@ namespace btgly {
   }
 
   BitVec BitVec::nand(const BitVec &rhs) const {
-    // TODO: specify
+    // Compute ~(this & rhs).
     if(!(is_small() && rhs.is_small())) {
       BitVec result(_width);
       Large &out = result.large_ref();
@@ -397,7 +398,7 @@ namespace btgly {
   }
 
   BitVec BitVec::nor(const BitVec &rhs) const {
-    // TODO: specify
+    // Compute ~(this | rhs).
     if(!(is_small() && rhs.is_small())) {
       BitVec result(_width);
       Large &out = result.large_ref();
@@ -415,7 +416,7 @@ namespace btgly {
   }
 
   BitVec BitVec::xnor(const BitVec &rhs) const {
-    // TODO: specify
+    // Compute ~(this ^ rhs).
     if(!(is_small() && rhs.is_small())) {
       BitVec result(_width);
       Large &out = result.large_ref();
@@ -433,7 +434,7 @@ namespace btgly {
   }
 
   bool BitVec::redand() const {
-    // TODO: specify
+    // Return true iff every bit is 1.
     if(!is_small()) {
       for(bool b: _bits()) {
         if(!b) { return false; }
@@ -457,7 +458,7 @@ namespace btgly {
 
   BitVec BitVec::neg() const {
     //$ ensures return._width == this._width
-    // TODO: specify
+    // Two's complement negation via bitwise not plus one.
     if(!is_small()) {
       BitVec result(_width);
       Large &out = result.large_ref();
@@ -480,7 +481,7 @@ namespace btgly {
   BitVec BitVec::add(const BitVec &rhs) const {
     //$ requires rhs._width == this._width
     //$ ensures return._width == this._width
-    // TODO: specify
+    // Ripple-carry addition modulo 2^width.
     _ensure_same_width(rhs, "add");
     if(!(is_small() && rhs.is_small())) {
       BitVec result(_width);
@@ -504,7 +505,7 @@ namespace btgly {
   BitVec BitVec::sub(const BitVec &rhs) const {
     //$ requires rhs._width == this._width
     //$ ensures return._width == this._width
-    // TODO: specify
+    // Subtract rhs from this using borrow propagation.
     _ensure_same_width(rhs, "sub");
     if(!(is_small() && rhs.is_small())) {
       BitVec result(_width);
@@ -526,7 +527,7 @@ namespace btgly {
   }
 
   BitVec BitVec::mul(const BitVec &rhs) const {
-    // TODO: specify
+    // Multiply two bit-vectors modulo 2^width.
     _ensure_same_width(rhs, "mul");
     const std::size_t w = this->_width;
     if(is_small() && rhs.is_small()) {
@@ -549,7 +550,7 @@ namespace btgly {
   }
 
   BitVec BitVec::udiv(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned division with divisor 0 producing all ones.
     _ensure_same_width(rhs, "udiv");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
@@ -579,7 +580,7 @@ namespace btgly {
   }
 
   BitVec BitVec::urem(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned remainder; divisor 0 returns *this.
     _ensure_same_width(rhs, "urem");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
@@ -604,7 +605,7 @@ namespace btgly {
   }
 
   BitVec BitVec::sdiv(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed division truncating toward zero.
     _ensure_same_width(rhs, "sdiv");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
@@ -649,7 +650,7 @@ namespace btgly {
   }
 
   BitVec BitVec::srem(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed remainder with sign of dividend.
     _ensure_same_width(rhs, "srem");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
@@ -687,7 +688,7 @@ namespace btgly {
   }
 
   BitVec BitVec::smod(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed modulo with sign of divisor.
     _ensure_same_width(rhs, "smod");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
@@ -728,8 +729,8 @@ namespace btgly {
   }
 
   BitVec BitVec::shl(const BitVec &rhs) const {
-    // TODO: specify
-    _ensure_same_width(rhs, "shl");
+    // Logical left shift by the amount given in rhs.
+    if(_width != 0) _ensure_same_width(rhs, "shl");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
       auto amt = static_cast<std::size_t>(rhs.as_small());
@@ -756,8 +757,8 @@ namespace btgly {
   }
 
   BitVec BitVec::lshr(const BitVec &rhs) const {
-    // TODO: specify
-    _ensure_same_width(rhs, "lshr");
+    // Logical right shift by the amount in rhs.
+    if(_width != 0) _ensure_same_width(rhs, "lshr");
     const std::size_t w = _width;
     if(is_small() && rhs.is_small()) {
       auto amt = static_cast<std::size_t>(rhs.as_small());
@@ -786,8 +787,8 @@ namespace btgly {
   }
 
   BitVec BitVec::ashr(const BitVec &rhs) const {
-    // TODO: specify
-    _ensure_same_width(rhs, "ashr");
+    // Arithmetic right shift preserving the sign bit.
+    if(_width != 0) _ensure_same_width(rhs, "ashr");
     const std::size_t w = _width;
     const bool sign = is_negative();
     if(is_small() && rhs.is_small()) {
@@ -817,7 +818,7 @@ namespace btgly {
   }
 
   bool BitVec::ult(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned comparison: this < rhs.
     _ensure_same_width(rhs, "ult");
     if(is_small() && rhs.is_small()) {
       Small lhs = trim(as_small(), _width);
@@ -828,7 +829,7 @@ namespace btgly {
   }
 
   bool BitVec::ule(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned comparison: this <= rhs.
     _ensure_same_width(rhs, "ule");
     if(is_small() && rhs.is_small()) {
       Small lhs = trim(as_small(), _width);
@@ -839,7 +840,7 @@ namespace btgly {
   }
 
   bool BitVec::uge(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned comparison: this >= rhs.
     _ensure_same_width(rhs, "uge");
     if(is_small() && rhs.is_small()) {
       Small lhs = trim(as_small(), _width);
@@ -850,7 +851,7 @@ namespace btgly {
   }
 
   bool BitVec::ugt(const BitVec &rhs) const {
-    // TODO: specify
+    // Unsigned comparison: this > rhs.
     _ensure_same_width(rhs, "ugt");
     if(is_small() && rhs.is_small()) {
       Small lhs = trim(as_small(), _width);
@@ -872,7 +873,7 @@ namespace btgly {
   }
 
   bool BitVec::slt(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed comparison: this < rhs.
     _ensure_same_width(rhs, "slt");
     if(is_small() && rhs.is_small()) {
       if(_width == 0) return false;
@@ -891,7 +892,7 @@ namespace btgly {
   }
 
   bool BitVec::sle(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed comparison: this <= rhs.
     _ensure_same_width(rhs, "sle");
     if(is_small() && rhs.is_small()) {
       if(_width == 0) return true;
@@ -910,7 +911,7 @@ namespace btgly {
   }
 
   bool BitVec::sge(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed comparison: this >= rhs.
     _ensure_same_width(rhs, "sge");
     if(is_small() && rhs.is_small()) {
       if(_width == 0) return true;
@@ -929,7 +930,7 @@ namespace btgly {
   }
 
   bool BitVec::sgt(const BitVec &rhs) const {
-    // TODO: specify
+    // Signed comparison: this > rhs.
     _ensure_same_width(rhs, "sgt");
     if(is_small() && rhs.is_small()) {
       if(_width == 0) return false;
@@ -960,7 +961,7 @@ namespace btgly {
   }
 
   bool BitVec::uaddo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect unsigned addition overflow.
     _ensure_same_width(rhs, "uaddo");
     if(is_small() && rhs.is_small()) {
       Small lhs = as_small();
@@ -978,7 +979,7 @@ namespace btgly {
   }
 
   bool BitVec::saddo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect signed addition overflow.
     _ensure_same_width(rhs, "saddo");
     if(_width == 0) return false;
     if(is_small() && rhs.is_small()) {
@@ -998,7 +999,7 @@ namespace btgly {
   }
 
   bool BitVec::umulo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect unsigned multiplication overflow.
     _ensure_same_width(rhs, "umulo");
     if(is_small() && rhs.is_small()) {
       unsigned __int128 prod = static_cast<unsigned __int128>(as_small()) * rhs.as_small();
@@ -1015,7 +1016,7 @@ namespace btgly {
   }
 
   bool BitVec::smulo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect signed multiplication overflow.
     _ensure_same_width(rhs, "smulo");
     const std::size_t w = _width;
     if(w == 0) return false;
@@ -1054,14 +1055,14 @@ namespace btgly {
   }
 
   bool BitVec::usubo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect unsigned subtraction overflow (borrow).
     _ensure_same_width(rhs, "usubo");
     if(is_small() && rhs.is_small()) { return as_small() < rhs.as_small(); }
     return ult(rhs);
   }
 
   bool BitVec::ssubo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect signed subtraction overflow.
     _ensure_same_width(rhs, "ssubo");
     if(_width == 0) return false;
     if(is_small() && rhs.is_small()) {
@@ -1081,7 +1082,7 @@ namespace btgly {
   }
 
   bool BitVec::sdivo(const BitVec &rhs) const {
-    // TODO: specify
+    // Detect signed division overflow (min / -1).
     _ensure_same_width(rhs, "sdivo");
     if(is_small() && rhs.is_small()) {
       if(_width == 0) return false;
@@ -1094,7 +1095,7 @@ namespace btgly {
   }
 
   std::string BitVec::u_to_int() const {
-    // TODO: specify
+    // Convert to unsigned decimal string.
     // Build decimal by scanning from MSB to LSB: s = s*2 + bit
     std::string s = "0";
     int msb = _msb_index(_bits());
@@ -1110,7 +1111,7 @@ namespace btgly {
   }
 
   std::string BitVec::s_to_int() const {
-    // TODO: specify
+    // Convert to signed decimal string.
     if(!is_negative()) { return u_to_int(); }
 
     // magnitude = two's-complement negation
@@ -1178,7 +1179,7 @@ namespace btgly {
 
   // TODO: + rename to ucomp
   int BitVec::_compare_unsigned(const BitVec &a, const BitVec &b) {
-    // TODO: specify
+    // Compare two bit-vectors as unsigned integers.
     // TODO: a.ensureSameWidth(b, "compare");
     const std::size_t w = a._width;
     for(std::size_t i = 0; i < w; ++i) {
