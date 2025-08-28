@@ -1291,19 +1291,15 @@ namespace btgly {
 
   std::vector<bool> &BitVec::_bits() const {
     if(is_small()) {
-      _prepare_bits();
+      if(!_cached_bits) {
+        Large tmp(_width);
+        Small value = as_small();
+        for(std::size_t i = 0; i < _width && i < 64; ++i) { tmp[i] = (value >> i) & Small{1}; }
+        _cached_bits = std::move(tmp);
+      }
       return *_cached_bits;
     }
     return std::get<Large>(_storage);
-  }
-
-  void BitVec::_prepare_bits() const {
-    if(!_cached_bits) {
-      Large tmp(_width);
-      Small value = as_small();
-      for(std::size_t i = 0; i < _width && i < 64; ++i) { tmp[i] = (value >> i) & Small{1}; }
-      _cached_bits = std::move(tmp);
-    }
   }
 
 } // namespace btgly
