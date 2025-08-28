@@ -26,9 +26,9 @@ namespace btgly {
     }
   }
 
-  BitVec BitVec::zeros(std::size_t width) { return BitVec(false, width); }
+  BitVec BitVec::zeros(std::size_t width) { return {false, width}; }
 
-  BitVec BitVec::ones(std::size_t width) { return BitVec(true, width); }
+  BitVec BitVec::ones(std::size_t width) { return {true, width}; }
 
   BitVec BitVec::from_int(std::string s, std::size_t width) {
     // TODO: specify
@@ -134,7 +134,7 @@ namespace btgly {
 
   bool BitVec::is_zero() const { return !redor(); }
 
-  bool BitVec::is_negative() const { return width() == 0 ? false : _bits[width() - 1]; }
+  bool BitVec::is_negative() const { return width() != 0 && _bits[width() - 1]; }
 
   bool BitVec::is_most_negative() const {
     const std::size_t w = width();
@@ -216,8 +216,8 @@ namespace btgly {
 
   BitVec BitVec::sign_extend(std::size_t k) const {
     // TODO: specify
-    BitVec result(0, this->width() + k);
-    const bool sign = width() == 0 ? false : _bits[width() - 1];
+    BitVec result(false, this->width() + k);
+    const bool sign = width() != 0 && _bits[width() - 1];
     for(std::size_t i = 0; i < this->width(); ++i) { result._bits[i] = _bits[i]; }
     for(std::size_t i = this->width(); i < result.width(); ++i) { result._bits[i] = sign; }
     if(result.is_small()) {
@@ -235,7 +235,7 @@ namespace btgly {
 
   BitVec BitVec::zero_extend(std::size_t k) const {
     // TODO: specify
-    BitVec result(0, width() + k);
+    BitVec result(false, width() + k);
     for(std::size_t i = 0; i < width(); ++i) { result._bits[i] = _bits[i]; }
     if(result.is_small()) {
       Small small = 0;
@@ -269,9 +269,7 @@ namespace btgly {
       }
       rot = trim(rot, w);
       result._storage = rot;
-      for(std::size_t i = 0; i < w; ++i) {
-        result._bits[i] = (rot >> i) & Small{1};
-      }
+      for(std::size_t i = 0; i < w; ++i) { result._bits[i] = (rot >> i) & Small{1}; }
     } else {
       Large &out = result.large_ref();
       const Large &lhs = large_ref();
@@ -304,9 +302,7 @@ namespace btgly {
       }
       rot = trim(rot, w);
       result._storage = rot;
-      for(std::size_t i = 0; i < w; ++i) {
-        result._bits[i] = (rot >> i) & Small{1};
-      }
+      for(std::size_t i = 0; i < w; ++i) { result._bits[i] = (rot >> i) & Small{1}; }
     } else {
       Large &out = result.large_ref();
       const Large &lhs = large_ref();
@@ -337,9 +333,7 @@ namespace btgly {
     Small val = trim(~as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -361,9 +355,7 @@ namespace btgly {
     Small val = trim(as_small() & rhs.as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -385,9 +377,7 @@ namespace btgly {
     Small val = trim(as_small() | rhs.as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -409,9 +399,7 @@ namespace btgly {
     Small val = trim(as_small() ^ rhs.as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -430,9 +418,7 @@ namespace btgly {
     Small val = trim(~(as_small() & rhs.as_small()), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -451,9 +437,7 @@ namespace btgly {
     Small val = trim(~(as_small() | rhs.as_small()), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -472,9 +456,7 @@ namespace btgly {
     Small val = trim(~(as_small() ^ rhs.as_small()), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -518,9 +500,7 @@ namespace btgly {
     Small val = trim(-as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -543,9 +523,7 @@ namespace btgly {
     Small val = trim(as_small() + rhs.as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -568,9 +546,7 @@ namespace btgly {
     Small val = trim(as_small() - rhs.as_small(), _width);
     BitVec result(_width);
     result._storage = val;
-    for(std::size_t i = 0; i < _width; ++i) {
-      result._bits[i] = (val >> i) & Small{1};
-    }
+    for(std::size_t i = 0; i < _width; ++i) { result._bits[i] = (val >> i) & Small{1}; }
     return result;
   }
 
@@ -803,14 +779,12 @@ namespace btgly {
     // TODO: ensureSameWidth(rhs, "shl");
     const std::size_t w = width();
     if(is_small() && rhs.is_small()) {
-      std::size_t amt = static_cast<std::size_t>(rhs.as_small());
+      auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return BitVec::zeros(w); }
       Small val = trim(as_small() << amt, w);
       BitVec result(w);
       result._storage = val;
-      for(std::size_t i = 0; i < w; ++i) {
-        result._bits[i] = (val >> i) & Small{1};
-      }
+      for(std::size_t i = 0; i < w; ++i) { result._bits[i] = (val >> i) & Small{1}; }
       return result;
     }
     bool ge = _rhs_amount_ge_width(rhs, w);
@@ -834,15 +808,13 @@ namespace btgly {
     // TODO: ensureSameWidth(rhs, "lshr");
     const std::size_t w = width();
     if(is_small() && rhs.is_small()) {
-      std::size_t amt = static_cast<std::size_t>(rhs.as_small());
+      auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return BitVec::zeros(w); }
       Small val = as_small() >> amt;
       val = trim(val, w);
       BitVec result(w);
       result._storage = val;
-      for(std::size_t i = 0; i < w; ++i) {
-        result._bits[i] = (val >> i) & Small{1};
-      }
+      for(std::size_t i = 0; i < w; ++i) { result._bits[i] = (val >> i) & Small{1}; }
       return result;
     }
     bool ge = _rhs_amount_ge_width(rhs, w);
@@ -868,17 +840,15 @@ namespace btgly {
     const std::size_t w = width();
     const bool sign = is_negative();
     if(is_small() && rhs.is_small()) {
-      std::size_t amt = static_cast<std::size_t>(rhs.as_small());
+      auto amt = static_cast<std::size_t>(rhs.as_small());
       if(amt >= w) { return sign ? BitVec::ones(w) : BitVec::zeros(w); }
       Small val = as_small();
       if(sign) { val |= ~mask(w); }
-      Small shifted = static_cast<Small>(static_cast<std::int64_t>(val) >> amt);
+      auto shifted = static_cast<Small>(static_cast<std::int64_t>(val) >> amt);
       shifted = trim(shifted, w);
       BitVec result(w);
       result._storage = shifted;
-      for(std::size_t i = 0; i < w; ++i) {
-        result._bits[i] = (shifted >> i) & Small{1};
-      }
+      for(std::size_t i = 0; i < w; ++i) { result._bits[i] = (shifted >> i) & Small{1}; }
       return result;
     }
     bool ge = _rhs_amount_ge_width(rhs, w);
@@ -932,9 +902,7 @@ namespace btgly {
     return _compare_unsigned(*this, rhs) > 0;
   }
 
-  bool BitVec::eq(const BitVec &rhs) const {
-    return this->equals(rhs);
-  }
+  bool BitVec::eq(const BitVec &rhs) const { return this->equals(rhs); }
 
   bool BitVec::equals(const BitVec &rhs) const {
     if(is_small() && rhs.is_small()) {
@@ -1013,9 +981,7 @@ namespace btgly {
     return cu > 0;
   }
 
-  BitVec BitVec::comp(const BitVec &rhs) const {
-    return BitVec(equals(rhs), 1);
-  }
+  BitVec BitVec::comp(const BitVec &rhs) const { return {equals(rhs), 1}; }
 
   bool BitVec::nego() const {
     if(is_small()) {
@@ -1090,7 +1056,7 @@ namespace btgly {
       std::int64_t a = sx(as_small());
       std::int64_t b = sx(rhs.as_small());
       __int128 prod = static_cast<__int128>(a) * static_cast<__int128>(b);
-      __int128 min = - (static_cast<__int128>(1) << (w - 1));
+      __int128 min = -(static_cast<__int128>(1) << (w - 1));
       __int128 max = (static_cast<__int128>(1) << (w - 1)) - 1;
       return prod < min || prod > max;
     }
@@ -1118,9 +1084,7 @@ namespace btgly {
   }
 
   bool BitVec::usubo(const BitVec &rhs) const {
-    if(is_small() && rhs.is_small()) {
-      return as_small() < rhs.as_small();
-    }
+    if(is_small() && rhs.is_small()) { return as_small() < rhs.as_small(); }
     return ult(rhs);
   }
 
@@ -1294,8 +1258,8 @@ namespace btgly {
     const std::size_t n = std::max(a.size(), b.size());
     if(a.size() < n) a.resize(n, false);
     for(std::size_t i = 0; i < n; ++i) {
-      const bool ai = (i < a.size()) ? a[i] : false;
-      const bool bi = (i < b.size()) ? b[i] : false;
+      const bool ai = (i < a.size()) && a[i];
+      const bool bi = (i < b.size()) && b[i];
       const bool diff = (ai ^ bi) ^ borrow;
       borrow = (!ai & bi) | ((!(ai) | bi) & borrow);
       a[i] = diff;
@@ -1308,8 +1272,8 @@ namespace btgly {
     int m = _msb_index(v);
     if(m < 0) {
       v.clear();
-    } else if(static_cast<std::size_t>(m + 1) < v.size()) {
-      v.resize(static_cast<std::size_t>(m + 1));
+    } else if(m + 1 < v.size()) {
+      v.resize(m + 1);
     }
   }
 
