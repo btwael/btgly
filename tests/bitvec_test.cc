@@ -604,25 +604,17 @@ TEST(BitVecEdgeCases, WidthOneBasics) {
 
 namespace {
 
-std::string random_bits(std::size_t w, std::mt19937_64 &rng) {
-  std::string s("0b");
-  for(std::size_t i = 0; i < w; ++i) {
-    s.push_back((rng() & 1) ? '1' : '0');
+  std::string random_bits(std::size_t w, std::mt19937_64 &rng) {
+    std::string s("0b");
+    for(std::size_t i = 0; i < w; ++i) { s.push_back((rng() & 1) ? '1' : '0'); }
+    return s;
   }
-  return s;
-}
 
-BitVec force_zero_large(const BitVec &v) {
-  return v.zero_extend(65);
-}
+  BitVec force_zero_large(const BitVec &v) { return v.zero_extend(65); }
 
-BitVec force_sign_large(const BitVec &v) {
-  return v.sign_extend(65);
-}
+  BitVec force_sign_large(const BitVec &v) { return v.sign_extend(65); }
 
-BitVec trunc(const BitVec &v, std::size_t w) {
-  return w == 0 ? BitVec::zeros(0) : v.extract(w - 1, 0);
-}
+  BitVec trunc(const BitVec &v, std::size_t w) { return w == 0 ? BitVec::zeros(0) : v.extract(w - 1, 0); }
 
 } // namespace
 
@@ -630,7 +622,7 @@ TEST(BitVecWidthProperty, SmallVsForcedLarge) {
   std::vector<std::size_t> widths = {1, 5, 8, 13, 16, 25, 32, 55, 64, 99, 128};
   std::mt19937_64 rng(123456);
 
-  for(std::size_t w : widths) {
+  for(std::size_t w: widths) {
     for(int iter = 0; iter < 50; ++iter) {
       BitVec a = BitVec::from_int(random_bits(w, rng), w);
       BitVec b = BitVec::from_int(random_bits(w, rng), w);
